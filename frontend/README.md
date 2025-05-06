@@ -1,46 +1,88 @@
-# Getting Started with Create React App
+# NoSQLBench Schema Generator UI
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+This is a TypeScript React frontend for the NoSQLBench Schema Generator. It allows users to upload Cassandra schema files, parse them, select tables, and generate NoSQLBench YAML configuration files.
 
-## Available Scripts
+## Features
 
-In the project directory, you can run:
+- Upload and parse Cassandra CQL schema files
+- Browse keyspaces and tables in the schema
+- Select tables for YAML generation
+- Configure NoSQLBench parameters (cycles, threads, consistency level)
+- Generate and download NoSQLBench YAML files
 
-### `npm start`
+## Prerequisites
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+- Node.js (v14+)
+- npm or yarn
+- Backend server running (Python FastAPI)
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+## Project Structure
 
-### `npm test`
+```
+nosqlbench-schema-generator/
+├── public/              # Static files
+├── src/                 # Source code
+│   ├── components/      # React components
+│   │   ├── KeyspaceList.tsx        # Keyspace navigation
+│   │   ├── KeyspaceList.css
+│   │   ├── TableList.tsx           # Table selection
+│   │   ├── TableList.css
+│   │   ├── ConfigurationPanel.tsx  # NoSQLBench config
+│   │   └── ConfigurationPanel.css
+│   ├── types.ts         # TypeScript interfaces
+│   ├── App.tsx          # Main application component
+│   ├── App.css
+│   ├── index.tsx        # Entry point
+│   └── index.css        # Global styles
+├── package.json
+├── tsconfig.json
+└── README.md
+```
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+## Setup and Installation
 
-### `npm run build`
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/yourusername/nosqlbench-schema-generator.git
+   cd nosqlbench-schema-generator
+   ```
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+2. Install dependencies:
+   ```bash
+   npm install
+   # or
+   yarn install
+   ```
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+3. Start the development server:
+   ```bash
+   npm start
+   # or
+   yarn start
+   ```
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+4. Open your browser and navigate to `http://localhost:3000`
 
-### `npm run eject`
+## Backend Connection
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+This frontend is designed to work with the NoSQLBench Schema Generator backend. Make sure the backend server is running on `http://localhost:8000`.
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+If the backend is running on a different URL, update the `proxy` field in `package.json` or modify the fetch URLs in the code.
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+## Usage
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+1. Upload a Cassandra schema file (`.cql` or `.txt`)
+2. Click "Parse Schema" to analyze the schema
+3. Select keyspaces and tables you want to include
+4. Configure NoSQLBench parameters (cycles, threads, consistency level)
+5. Click "Generate NoSQLBench YAML Files" to download the generated YAML files
 
-## Learn More
+## Development
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+- `npm start` - Start the development server
+- `npm build` - Build the production version
+- `npm test` - Run tests
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+## License
+
+This project is licensed under the MIT License.
