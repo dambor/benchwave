@@ -1,27 +1,21 @@
 # Makefile
 
-.PHONY: all backend frontend install-frontend start-frontend run
+.PHONY: all install-frontend backend frontend run
 
 all: run
 
-# Run the backend
-backend:
-	@echo "Starting backend..."
-	python backend/main.py
-
-# Install frontend dependencies
 install-frontend:
 	@echo "Installing frontend dependencies..."
 	cd frontend && yarn install
 
-# Start the frontend
-start-frontend:
+backend:
+	@echo "Starting backend..."
+	python backend/main.py
+
+frontend:
 	@echo "Starting frontend..."
 	cd frontend && yarn start
 
-# Run both frontend and backend
 run: install-frontend
-	@echo "Starting both backend and frontend..."
-	@# Run backend and frontend in parallel (suppress output merging with &)
-	@python backend/main.py & \
-	cd frontend && yarn start
+	@echo "Starting backend and frontend concurrently..."
+	cd frontend && yarn dev || echo "Frontend or backend crashed. Check logs above."
