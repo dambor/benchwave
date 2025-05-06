@@ -6,6 +6,7 @@ import io
 import zipfile
 import json
 from schema_parser import CQLParser
+from read_yaml_generator import generate_read_yaml_from_text
 
 app = FastAPI(title="NoSQLBench Schema Generator")
 
@@ -72,6 +73,29 @@ async def generate_yaml(
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error generating YAML files: {str(e)}")
+
+@app.post("/api/generate-read-yaml")
+async def generate_read_yaml_endpoint(
+    ingest_yaml_file: UploadFile = File(...),
+    dsbulk_csv_path: str = Form(...),
+    keyspace: str = Form("baselines")
+):
+    """
+    Generate a NoSQLBench read YAML file using the ingest YAML file and CSV path.
+    """
+    try:
+        content = await ingest_yaml_file.read()
+        ingest_yaml_text = content.decode("utf-8")
+        
+        read_yaml = generate_read_yaml_from_text(ingest_yaml_text, dsbulk_csv_path, keyspace)
+        
+        return StreamingResponse(
+            io.BytesIO(read_yaml.encode("utf-8")),
+            media_type="application/x-yaml",
+            headers={"Content-Disposition": f"attachment; filename=read_{ingest_yaml_file.filename}"}
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error generating read YAML: {str(e)}")
 
 @app.get("/api/health")
 async def health_check():
