@@ -155,7 +155,7 @@ const ToolsPanel: React.FC<ToolsPanelProps> = ({
   return (
     <div className="tools-panel">
       <h2>Migration Flow</h2>
-      
+
       {activeTool ? (
         // Display the active tool
         <div className="active-tool-container">
@@ -167,7 +167,7 @@ const ToolsPanel: React.FC<ToolsPanelProps> = ({
                   // Logic to navigate to previous step
                   if (activeTool === 'write-yaml-generator') {
                     // First step, go back to tools overview
-                    handleToolSelect('null');
+                    setActiveTool(null); // Use null directly rather than as a string
                   } else if (activeTool === 'nb5-loader') {
                     handleToolSelect('write-yaml-generator');
                   } else if (activeTool === 'dsbulk') {
@@ -185,13 +185,6 @@ const ToolsPanel: React.FC<ToolsPanelProps> = ({
               </button>
               
               <div className="step-title">
-                <div className="step-number">
-                  Step {activeTool === 'write-yaml-generator' ? '1' : 
-                        activeTool === 'nb5-loader' ? '2' : 
-                        activeTool === 'dsbulk' ? '3' : 
-                        activeTool === 'read-yaml-generator' ? '4' : 
-                        activeTool === 'nb5-reader' ? '5' : '6'} of 6:
-                </div>
                 <h2>
                   {activeTool === 'write-yaml-generator' ? 'Generate Write YAML Files' : 
                   activeTool === 'nb5-loader' ? 'Run NB5 Loader' : 
@@ -217,7 +210,7 @@ const ToolsPanel: React.FC<ToolsPanelProps> = ({
                     handleToolSelect('cdm');
                   } else if (activeTool === 'cdm') {
                     // Last step, go back to tools overview
-                    handleToolSelect('null');
+                    setActiveTool(null);
                   }
                 }}
               >
@@ -225,6 +218,7 @@ const ToolsPanel: React.FC<ToolsPanelProps> = ({
               </button>
             </div>
           </div>
+
           
           {activeTool === 'write-yaml-generator' && (
             <div className="write-yaml-tool">

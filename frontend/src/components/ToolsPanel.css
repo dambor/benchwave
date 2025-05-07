@@ -124,24 +124,7 @@
   border-bottom: 1px solid #e5e7eb;
 }
 
-.back-button {
-  background: none;
-  border: none;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 14px;
-  font-weight: 500;
-  color: #4b5563;
-  cursor: pointer;
-  padding: 8px 16px;
-  border-radius: 4px;
-  transition: all 0.2s;
-}
 
-.back-button:hover {
-  background-color: #f3f4f6;
-}
 
 /* Write/Read YAML Tool styles */
 .write-yaml-tool,
@@ -295,4 +278,49 @@
 .tools-panel .parse-button:disabled {
   background-color: #93c5fd;
   cursor: not-allowed;
+}
+
+/* Add styles for the next button to match the back button */
+.next-button, .back-button {
+  background-color: #f8f9fa;
+  border: 1px solid #dee2e6;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 500;
+  color: #6c757d;
+  cursor: pointer;
+  padding: 10px 20px;
+  border-radius: 6px;
+  transition: all 0.2s;
+  text-decoration: none;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.next-button:hover, .back-button:hover {
+  background-color: #f1f3f5;
+  color: #495057;
+}
+
+/* Add styles for the tool header container to display buttons properly */
+.tool-header-container {
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.tool-header {
+  padding: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.step-title {
+  text-align: center;
+}
+
+.step-title h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
 }
