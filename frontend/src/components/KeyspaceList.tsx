@@ -9,6 +9,9 @@ interface KeyspaceListProps {
   onKeyspaceSelect: (keyspace: string) => void;
 }
 
+// Use a constant for the Bench Flow key for consistency
+const BENCH_FLOW_KEY = 'benchflow';
+
 const KeyspaceList: React.FC<KeyspaceListProps> = ({ 
   keyspaces, 
   selectedKeyspace,
@@ -19,11 +22,11 @@ const KeyspaceList: React.FC<KeyspaceListProps> = ({
       <h2>Navigation</h2>
       <ul>        
         <li 
-          className={selectedKeyspace === 'tools' ? 'selected' : ''}
-          onClick={() => onKeyspaceSelect('tools')}
+          className={selectedKeyspace === BENCH_FLOW_KEY ? 'selected' : ''}
+          onClick={() => onKeyspaceSelect(BENCH_FLOW_KEY)}
         >
           <span className="tools-icon"></span>
-          Tools
+          Bench Flow
         </li>
         
         <li 

@@ -7,7 +7,7 @@ import CDMUtility from './CDMUtility';
 import TableList from './TableList';
 import ConfigurationPanel from './ConfigurationPanel';
 import ReadYamlPanel from './ReadYamlPanel';
-import { Configuration } from '../types';
+import { Configuration, SchemaInfo } from '../types';
 
 // Define the GeneratedYamlFile interface here
 interface GeneratedYamlFile {
@@ -17,7 +17,8 @@ interface GeneratedYamlFile {
 }
 
 interface ToolsPanelProps {
-  schema: any;
+  schema: SchemaInfo | null;
+  setSchemaInfo: (schema: SchemaInfo) => void;
   generatedYamlFiles?: GeneratedYamlFile[]; // Make it optional with proper typing
   configuration: Configuration;
   onConfigChange: (config: Partial<Configuration>) => void;
@@ -33,10 +34,12 @@ interface ToolsPanelProps {
   isLoading: boolean;
   readYamlLoading: boolean;
   csvReadLoading: boolean;
+  setError: (error: string | null) => void;
 }
 
 const ToolsPanel: React.FC<ToolsPanelProps> = ({ 
   schema, 
+  setSchemaInfo,
   generatedYamlFiles = [], // Default to empty array with proper typing
   configuration,
   onConfigChange,
@@ -51,12 +54,18 @@ const ToolsPanel: React.FC<ToolsPanelProps> = ({
   selectedFiles,
   isLoading,
   readYamlLoading,
-  csvReadLoading
+  csvReadLoading,
+  setError
 }) => {
   const [activeTool, setActiveTool] = useState<string | null>(null);
   const [selectedKeyspace, setSelectedKeyspace] = useState<string>('');
+  const [schemaFile, setSchemaFile] = useState<File | null>(null);
+  const [schemaLoading, setSchemaLoading] = useState<boolean>(false);
   
-  // Extract keyspaces and tables from schema
+  // Base API URL - change this if your backend is running on a different port
+  const API_BASE_URL = 'http://localhost:8000';
+  
+  // Extract keyspaces and tables from schema if it exists
   const keyspaces = schema ? Object.keys(schema.keyspaces) : [];
   
   // Transform tables data for the tool components
@@ -91,10 +100,56 @@ const ToolsPanel: React.FC<ToolsPanelProps> = ({
     setSelectedKeyspace(newKeyspace);
     onSelectAll(false); // Clear table selection when changing keyspace
   };
+
+  // File upload handlers
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files && event.target.files.length > 0) {
+      setSchemaFile(event.target.files[0]);
+      setError(null);
+    }
+  };
+
+  const handleParseSchema = async () => {
+    if (!schemaFile) {
+      setError('Please select a schema file first');
+      return;
+    }
+
+    setSchemaLoading(true);
+    setError(null);
+
+    const formData = new FormData();
+    formData.append('schema_file', schemaFile);
+
+    try {
+      // Using the correct endpoint for parsing schema
+      const response = await fetch(`${API_BASE_URL}/api/parse-schema`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Failed to parse schema');
+      }
+
+      const data = await response.json();
+      setSchemaInfo(data);
+      
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'An unknown error occurred');
+    } finally {
+      setSchemaLoading(false);
+    }
+  };
+  
+
+  // Use a constant for the Bench Flow key for consistency
+  const BENCH_FLOW_KEY = 'benchflow';
   
   return (
     <div className="tools-panel">
-      <h2>NoSQLBench Tools</h2>
+      <h2>Migration Steps</h2>
       
       {activeTool ? (
         // Display the active tool
@@ -116,49 +171,77 @@ const ToolsPanel: React.FC<ToolsPanelProps> = ({
                 These files can be used to create ingestion workloads for performance testing.
               </p>
               
-              <div className="keyspace-selector">
-                <label htmlFor="keyspace-dropdown">Select Keyspace:</label>
-                <select 
-                  id="keyspace-dropdown"
-                  value={selectedKeyspace}
-                  onChange={handleKeyspaceChange}
-                  className="keyspace-dropdown"
-                >
-                  <option value="">All Keyspaces</option>
-                  {keyspaces.map(keyspace => (
-                    <option key={keyspace} value={keyspace}>{keyspace}</option>
-                  ))}
-                </select>
-              </div>
-              
-              <TableList 
-                tables={Object.entries(schema.tables)
-                  .filter(([_, table]: [string, any]) => {
-                    return !selectedKeyspace || table.keyspace === selectedKeyspace;
-                  })
-                  .map(([fullName, details]: [string, any]) => ({ 
-                    fullName,
-                    ...details 
-                  }))}
-                selectedTables={selectedTables}
-                onTableSelect={onTableSelect}
-                onSelectAll={onSelectAll}
-                keyspace={selectedKeyspace}
-                onDownloadTable={onDownloadTable}
-              />
-              
-              <ConfigurationPanel 
-                configuration={configuration}
-                onConfigChange={onConfigChange}
-              />
-              
-              <button 
-                className="generate-button"
-                onClick={onGenerateYaml}
-                disabled={selectedTables.length === 0 || isLoading}
-              >
-                {isLoading ? 'Generating...' : 'Generate NoSQLBench YAML Files'}
-              </button>
+              {!schema ? (
+                <div className="upload-section">
+                  <div className="file-upload">
+                    <label htmlFor="schema-file">
+                      <i className="document-icon"></i>
+                      Upload Cassandra Schema
+                    </label>
+                    <input 
+                      type="file" 
+                      id="schema-file" 
+                      accept=".cql,.txt,.zip"
+                      onChange={handleFileChange}
+                    />
+                    {schemaFile && <span className="file-name">{schemaFile.name}</span>}
+                  </div>
+                  
+                  <button 
+                    className="parse-button"
+                    onClick={handleParseSchema}
+                    disabled={!schemaFile || schemaLoading}
+                  >
+                    {schemaLoading ? 'Parsing...' : 'Parse Schema'}
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <div className="keyspace-selector">
+                    <label htmlFor="keyspace-dropdown">Select Keyspace:</label>
+                    <select 
+                      id="keyspace-dropdown"
+                      value={selectedKeyspace}
+                      onChange={handleKeyspaceChange}
+                      className="keyspace-dropdown"
+                    >
+                      <option value="">All Keyspaces</option>
+                      {keyspaces.map(keyspace => (
+                        <option key={keyspace} value={keyspace}>{keyspace}</option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  <TableList 
+                    tables={Object.entries(schema.tables)
+                      .filter(([_, table]: [string, any]) => {
+                        return !selectedKeyspace || table.keyspace === selectedKeyspace;
+                      })
+                      .map(([fullName, details]: [string, any]) => ({ 
+                        fullName,
+                        ...details 
+                      }))}
+                    selectedTables={selectedTables}
+                    onTableSelect={onTableSelect}
+                    onSelectAll={onSelectAll}
+                    keyspace={selectedKeyspace}
+                    onDownloadTable={onDownloadTable}
+                  />
+                  
+                  <ConfigurationPanel 
+                    configuration={configuration}
+                    onConfigChange={onConfigChange}
+                  />
+                  
+                  <button 
+                    className="generate-button"
+                    onClick={onGenerateYaml}
+                    disabled={selectedTables.length === 0 || isLoading}
+                  >
+                    {isLoading ? 'Generating...' : 'Generate NoSQLBench YAML Files'}
+                  </button>
+                </>
+              )}
             </div>
           )}
           

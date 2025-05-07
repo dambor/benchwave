@@ -1,9 +1,6 @@
 // src/App.tsx
 import React, { useState, useEffect } from 'react';
 import './App.css';
-import KeyspaceList from './components/KeyspaceList';
-import TableList from './components/TableList';
-import ConfigurationPanel from './components/ConfigurationPanel';
 import ToolsPanel from './components/ToolsPanel';
 import GeneratedFilesList from './components/GeneratedFilesList';
 import { SchemaInfo, Table, Keyspace, Configuration, GeneratedYamlFile } from './types';
@@ -14,12 +11,10 @@ import './components/SettingsPanel.css';
 const API_BASE_URL = 'http://localhost:8000';
 
 function App() {
-  // Existing states
-  const [schemaFile, setSchemaFile] = useState<File | null>(null);
+  // States for schema and tables
   const [schemaInfo, setSchemaInfo] = useState<SchemaInfo | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedKeyspace, setSelectedKeyspace] = useState<string>('');
   const [selectedTables, setSelectedTables] = useState<string[]>([]);
   const [configuration, setConfiguration] = useState<Configuration>({
     numCycles: 1000000,
@@ -36,56 +31,9 @@ function App() {
   const [generatedFiles, setGeneratedFiles] = useState<GeneratedYamlFile[]>([]);
   const [showGeneratedFiles, setShowGeneratedFiles] = useState<boolean>(false);
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files && event.target.files.length > 0) {
-      setSchemaFile(event.target.files[0]);
-      setError(null);
-    }
+  const handleSetSchemaInfo = (schema: SchemaInfo) => {
+    setSchemaInfo(schema);
   };
-
-  const handleParseSchema = async () => {
-    if (!schemaFile) {
-      setError('Please select a schema file first');
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-
-    const formData = new FormData();
-    formData.append('schema_file', schemaFile);
-
-    try {
-      // Using the correct endpoint for parsing schema
-      const response = await fetch(`${API_BASE_URL}/api/parse-schema`, {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Failed to parse schema');
-      }
-
-      const data = await response.json();
-      setSchemaInfo(data);
-      
-      // If there's only one keyspace, select it automatically
-      const keyspaces = Object.keys(data.keyspaces);
-      if (keyspaces.length === 1) {
-        setSelectedKeyspace(keyspaces[0]);
-      }
-    } catch (error) {
-      setError(error instanceof Error ? error.message : 'An unknown error occurred');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleKeyspaceSelect = (keyspace: string) => {
-    setSelectedKeyspace(keyspace);
-    setSelectedTables([]);
-  };  
 
   const handleTableSelect = (tableName: string, isSelected: boolean) => {
     if (isSelected) {
@@ -99,9 +47,10 @@ function App() {
     if (!schemaInfo) return;
     
     if (isSelected) {
-      // Select all tables in the current keyspace
+      // Select all tables in the specified keyspace
+      const keyspace = "";  // Default to all keyspaces since sidebar is removed
       const tablesInKeyspace = Object.entries(schemaInfo.tables)
-        .filter(([_, table]) => !selectedKeyspace || table.keyspace === selectedKeyspace)
+        .filter(([_, table]) => !keyspace || table.keyspace === keyspace)
         .map(([fullName, _]) => fullName);
       
       setSelectedTables(tablesInKeyspace);
@@ -430,157 +379,34 @@ blocks:
   return (
     <div className="App">
       <header className="App-header">
-        <h1>NoSQLBench Schema Generator</h1>
+        <h1>NoSQLBench Flow</h1>
       </header>
       
-      <div className="upload-section">
-        <div className="file-upload">
-          <label htmlFor="schema-file">
-            <i className="document-icon"></i>
-            Upload Cassandra Schema
-          </label>
-          <input 
-            type="file" 
-            id="schema-file" 
-            accept=".cql,.txt,.zip"
-            onChange={handleFileChange}
-          />
-          {schemaFile && <span className="file-name">{schemaFile.name}</span>}
-        </div>
-        
-        <button 
-          className="parse-button"
-          onClick={handleParseSchema}
-          disabled={!schemaFile || loading}
-        >
-          {loading ? 'Parsing...' : 'Parse Schema'}
-        </button>
-      </div>
-      
-      {error && <div className="error-message">{error}</div>}
+      <div className="main-content-full">
+        {/* Directly render the ToolsPanel as the main content */}
+        <ToolsPanel 
+          schema={schemaInfo}
+          setSchemaInfo={handleSetSchemaInfo}
+          generatedYamlFiles={generatedFiles}
+          configuration={configuration}
+          onConfigChange={handleConfigChange}
+          selectedTables={selectedTables}
+          onTableSelect={handleTableSelect}
+          onSelectAll={handleSelectAllTables}
+          onGenerateYaml={handleGenerateYaml}
+          onDownloadTable={handleDownloadTableYaml}
+          onGenerateReadYaml={handleGenerateReadYaml}
+          onGenerateFromCsv={handleGenerateFromCsv}
+          onFilesSelected={handleIngestFilesChange}
+          selectedFiles={selectedIngestFiles}
+          isLoading={loading}
+          readYamlLoading={readYamlLoading}
+          csvReadLoading={csvReadLoading}
+          setError={setError}
+        />
 
-      {schemaInfo && (
-        <div className="main-content">
-          <div className="left-panel">
-            <KeyspaceList 
-              keyspaces={Object.entries(schemaInfo.keyspaces).map(([name, details]) => ({ 
-                name, 
-                ...details 
-              }))}
-              selectedKeyspace={selectedKeyspace}
-              onKeyspaceSelect={handleKeyspaceSelect}
-            />
-          </div>
-          
-          <div className="right-panel">
-            {selectedKeyspace === 'tools' ? (
-              // Tools panel content - pass all needed handlers and states for YAML generation
-              <ToolsPanel 
-                schema={schemaInfo}
-                generatedYamlFiles={generatedFiles}
-                configuration={configuration}
-                onConfigChange={handleConfigChange}
-                selectedTables={selectedTables}
-                onTableSelect={handleTableSelect}
-                onSelectAll={handleSelectAllTables}
-                onGenerateYaml={handleGenerateYaml}
-                onDownloadTable={handleDownloadTableYaml}
-                onGenerateReadYaml={handleGenerateReadYaml}
-                onGenerateFromCsv={handleGenerateFromCsv}
-                onFilesSelected={handleIngestFilesChange}
-                selectedFiles={selectedIngestFiles}
-                isLoading={loading}
-                readYamlLoading={readYamlLoading}
-                csvReadLoading={csvReadLoading}
-              />
-            ) : selectedKeyspace === 'settings' ? (
-              // Settings panel content
-              <div className="settings-panel">
-                <h2>Application Settings</h2>
-                <div className="settings-container">
-                  <div className="settings-section">
-                    <h3>Connection Settings</h3>
-                    <div className="settings-row">
-                      <label htmlFor="cassandra-host">Cassandra Host</label>
-                      <input type="text" id="cassandra-host" placeholder="localhost" />
-                    </div>
-                    <div className="settings-row">
-                      <label htmlFor="cassandra-port">Cassandra Port</label>
-                      <input type="number" id="cassandra-port" placeholder="9042" />
-                    </div>
-                    <div className="settings-row">
-                      <label htmlFor="cassandra-username">Username</label>
-                      <input type="text" id="cassandra-username" placeholder="cassandra" />
-                    </div>
-                    <div className="settings-row">
-                      <label htmlFor="cassandra-password">Password</label>
-                      <input type="password" id="cassandra-password" />
-                    </div>
-                  </div>
-                  
-                  <div className="settings-section">
-                    <h3>Application Settings</h3>
-                    <div className="settings-row">
-                      <label htmlFor="theme-select">Theme</label>
-                      <select id="theme-select">
-                        <option value="light">Light</option>
-                        <option value="dark">Dark</option>
-                        <option value="system">System Default</option>
-                      </select>
-                    </div>
-                    <div className="settings-row">
-                      <label htmlFor="yaml-path">Default YAML Export Path</label>
-                      <div className="input-with-button">
-                        <input type="text" id="yaml-path" placeholder="/path/to/yamls" />
-                        <button className="browse-button">Browse</button>
-                      </div>
-                    </div>
-                    <div className="settings-row checkbox-row">
-                      <input type="checkbox" id="auto-select" />
-                      <label htmlFor="auto-select">Auto-select tables when keyspace is selected</label>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="settings-actions">
-                  <button className="save-settings-button">Save Settings</button>
-                  <button className="reset-settings-button">Reset to Defaults</button>
-                </div>
-              </div>
-            ) : (
-              // Regular keyspace/table view - now just shows tables
-              <>
-                <TableList 
-                  tables={Object.entries(schemaInfo.tables)
-                    .filter(([_, table]) => !selectedKeyspace || table.keyspace === selectedKeyspace)
-                    .map(([fullName, details]) => ({ 
-                      fullName,
-                      ...details 
-                    }))}
-                  selectedTables={selectedTables}
-                  onTableSelect={handleTableSelect}
-                  onSelectAll={handleSelectAllTables}
-                  keyspace={selectedKeyspace}
-                  onDownloadTable={handleDownloadTableYaml}
-                />
-                
-                <ConfigurationPanel 
-                  configuration={configuration}
-                  onConfigChange={handleConfigChange}
-                />
-                
-                <button 
-                  className="generate-button"
-                  onClick={handleGenerateYaml}
-                  disabled={selectedTables.length === 0 || loading}
-                >
-                  {loading ? 'Generating...' : 'Generate NoSQLBench YAML Files'}
-                </button>
-              </>
-            )}
-          </div>
-        </div>
-      )}
+        {error && <div className="error-message">{error}</div>}
+      </div>
 
       {/* Show generated files overlay when files are ready */}
       {showGeneratedFiles && (
