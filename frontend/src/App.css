@@ -1,4 +1,4 @@
-/* src/App.css - Updated with styles for the tabbed interface and ReadYamlPanel */
+/* src/App.css - Updated with mode tabs styling */
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
   margin: 0;
@@ -132,6 +132,7 @@ body {
   border-radius: 8px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   overflow: hidden;
+  margin-bottom: 20px;
 }
 
 .mode-tab {
@@ -144,6 +145,7 @@ body {
   border-bottom: 2px solid transparent;
   cursor: pointer;
   transition: all 0.2s;
+  text-align: center;
 }
 
 .mode-tab.active {
@@ -162,7 +164,7 @@ body {
   font-size: 16px;
   font-weight: 500;
   color: white;
-  background-color: #4a4a4a;
+  background-color: #2563eb;
   border: none;
   border-radius: 4px;
   cursor: pointer;
@@ -171,96 +173,15 @@ body {
 }
 
 .generate-button:hover {
-  background-color: #333333;
+  background-color: #1d4ed8;
 }
 
 .generate-button:disabled {
-  background-color: #cccccc;
-  color: #666666;
+  background-color: #93c5fd;
   cursor: not-allowed;
 }
-/* Additional styles for App.css to support the new features */
 
 /* Generated Files Overlay */
-.generated-files-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.6);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-  padding: 20px;
-}
-
-/* Mode Tabs Styles */
-/* Update for App.css to support three tabs */
-.mode-tabs {
-  display: flex;
-  background-color: white;
-  border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  overflow: hidden;
-  margin-bottom: 20px;
-}
-
-.mode-tab {
-  flex: 1;
-  padding: 12px 0;
-  text-align: center;
-  font-size: 14px;
-  font-weight: 500;
-  background-color: #f9fafb;
-  border: none;
-  border-bottom: 2px solid transparent;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.mode-tab.active {
-  background-color: white;
-  border-bottom-color: #2563eb;
-  color: #2563eb;
-}
-
-.mode-tab:hover:not(.active) {
-  background-color: #f3f4f6;
-}
-
-/* Ensure tabs are evenly sized with the three-tab layout */
-@media (min-width: 768px) {
-  .mode-tab {
-    min-width: 120px;
-  }
-}
-
-/* Update the upload section to make it more prominent */
-.upload-section {
-  background-color: white;
-  border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  padding: 20px;
-  margin-bottom: 30px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-/* Style the error message to be more visible */
-.error-message {
-  color: #ef4444;
-  background-color: #fee2e2;
-  padding: 10px 16px;
-  border-radius: 4px;
-  margin-bottom: 20px;
-  border-left: 4px solid #ef4444;
-  font-size: 14px;
-}
-
-/* Improved generated files overlay styling */
 .generated-files-overlay {
   position: fixed;
   top: 0;

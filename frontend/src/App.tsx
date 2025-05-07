@@ -5,7 +5,7 @@ import KeyspaceList from './components/KeyspaceList';
 import TableList from './components/TableList';
 import ConfigurationPanel from './components/ConfigurationPanel';
 import ReadYamlPanel from './components/ReadYamlPanel';
-import ToolsPanel from './components/ToolsPanel'; // Import the ToolsPanel component
+import ToolsPanel from './components/ToolsPanel';
 import GeneratedFilesList from './components/GeneratedFilesList';
 import { SchemaInfo, Table, Keyspace, Configuration, GeneratedYamlFile } from './types';
 import './components/ToolsPanel.css';
@@ -28,7 +28,7 @@ function App() {
     consistencyLevel: 'ONE'
   });
   
-  // States for the read mode
+  // Add state for active mode (write or read)
   const [activeMode, setActiveMode] = useState<'write' | 'read'>('write');
   const [selectedIngestFiles, setSelectedIngestFiles] = useState<FileList | null>(null);
   const [readYamlLoading, setReadYamlLoading] = useState<boolean>(false);
@@ -466,7 +466,6 @@ blocks:
       
       {error && <div className="error-message">{error}</div>}
 
-
       {schemaInfo && (
         <div className="main-content">
           <div className="left-panel">
@@ -481,8 +480,7 @@ blocks:
           </div>
           
           <div className="right-panel">
-          
-          {selectedKeyspace === 'tools' ? (
+            {selectedKeyspace === 'tools' ? (
               // Tools panel content - pass the schema info to ToolsPanel
               <ToolsPanel 
                 schema={schemaInfo} 
@@ -543,33 +541,65 @@ blocks:
                 </div>
               </div>
             ) : (
-              // Regular keyspace/table view          
+              // Regular keyspace/table view
               <>
-                <TableList 
-                  tables={Object.entries(schemaInfo.tables)
-                    .filter(([_, table]) => !selectedKeyspace || table.keyspace === selectedKeyspace)
-                    .map(([fullName, details]) => ({ 
-                      fullName,
-                      ...details 
-                    }))}
-                  selectedTables={selectedTables}
-                  onTableSelect={handleTableSelect}
-                  onSelectAll={handleSelectAllTables}
-                  keyspace={selectedKeyspace}
-                />
+                {/* Mode tabs - Write or Read */}
+                <div className="mode-tabs">
+                  <button 
+                    className={`mode-tab ${activeMode === 'write' ? 'active' : ''}`}
+                    onClick={() => setActiveMode('write')}
+                  >
+                    Write Files
+                  </button>
+                  <button 
+                    className={`mode-tab ${activeMode === 'read' ? 'active' : ''}`}
+                    onClick={() => setActiveMode('read')}
+                  >
+                    Read Files
+                  </button>
+                </div>
                 
-                <ConfigurationPanel 
-                  configuration={configuration}
-                  onConfigChange={handleConfigChange}
-                />
-                
-                <button 
-                  className="generate-button"
-                  onClick={handleGenerateYaml}
-                  disabled={selectedTables.length === 0 || loading}
-                >
-                  {loading ? 'Generating...' : 'Generate NoSQLBench YAML Files'}
-                </button>
+                {activeMode === 'write' ? (
+                  // Write YAML mode
+                  <>
+                    <TableList 
+                      tables={Object.entries(schemaInfo.tables)
+                        .filter(([_, table]) => !selectedKeyspace || table.keyspace === selectedKeyspace)
+                        .map(([fullName, details]) => ({ 
+                          fullName,
+                          ...details 
+                        }))}
+                      selectedTables={selectedTables}
+                      onTableSelect={handleTableSelect}
+                      onSelectAll={handleSelectAllTables}
+                      keyspace={selectedKeyspace}
+                      onDownloadTable={handleDownloadTableYaml}
+                    />
+                    
+                    <ConfigurationPanel 
+                      configuration={configuration}
+                      onConfigChange={handleConfigChange}
+                    />
+                    
+                    <button 
+                      className="generate-button"
+                      onClick={handleGenerateYaml}
+                      disabled={selectedTables.length === 0 || loading}
+                    >
+                      {loading ? 'Generating...' : 'Generate NoSQLBench YAML Files'}
+                    </button>
+                  </>
+                ) : (
+                  // Read YAML mode
+                  <ReadYamlPanel 
+                    onFilesSelected={handleIngestFilesChange}
+                    onGenerateReadYaml={handleGenerateReadYaml}
+                    onGenerateFromCsv={handleGenerateFromCsv}
+                    selectedFiles={selectedIngestFiles}
+                    isLoading={readYamlLoading}
+                    csvReadLoading={csvReadLoading}
+                  />
+                )}
               </>
             )}
           </div>
