@@ -1,11 +1,11 @@
-// src/App.tsx - Updated to include ToolsPanel
+// src/App.tsx
 import React, { useState, useEffect } from 'react';
 import './App.css';
 import KeyspaceList from './components/KeyspaceList';
 import TableList from './components/TableList';
 import ConfigurationPanel from './components/ConfigurationPanel';
 import ReadYamlPanel from './components/ReadYamlPanel';
-import ToolsPanel from './components/ToolsPanel'; // Import the new ToolsPanel component
+import ToolsPanel from './components/ToolsPanel'; // Import the ToolsPanel component
 import GeneratedFilesList from './components/GeneratedFilesList';
 import { SchemaInfo, Table, Keyspace, Configuration, GeneratedYamlFile } from './types';
 import './components/ToolsPanel.css';
@@ -482,44 +482,9 @@ blocks:
           
           <div className="right-panel">
           
-          
           {selectedKeyspace === 'tools' ? (
-              // Tools panel content
-              <div className="tools-panel">
-                <h2>NoSQLBench Tools</h2>
-                <div className="tools-container">
-                  <div className="tool-card">
-                    <div className="tool-icon nb5-icon"></div>
-                    <h3>NB5 Executor</h3>
-                    <p>Execute and monitor NoSQLBench 5 workloads directly from the UI</p>
-                    <button className="tool-button">Launch Tool</button>
-                  </div>
-                  <div className="tool-card">
-                    <div className="tool-icon dsbulk-icon"></div>
-                    <h3>DSBulk Utility</h3>
-                    <p>Generate DSBulk commands for high-performance data loading and unloading</p>
-                    <button className="tool-button">Launch Tool</button>
-                  </div>
-                  <div className="tool-card">
-                    <div className="tool-icon analyzer-icon"></div>
-                    <h3>Schema Analyzer</h3>
-                    <p>Analyze your Cassandra schema and get optimization recommendations</p>
-                    <button className="tool-button">Launch Tool</button>
-                  </div>
-                  <div className="tool-card">
-                    <div className="tool-icon validator-icon"></div>
-                    <h3>YAML Validator</h3>
-                    <p>Validate your NoSQLBench YAML files for syntax and logic errors</p>
-                    <button className="tool-button">Launch Tool</button>
-                  </div>
-                  <div className="tool-card">
-                    <div className="tool-icon performance-icon"></div>
-                    <h3>Performance Estimator</h3>
-                    <p>Estimate performance metrics based on your schema and workload</p>
-                    <button className="tool-button">Launch Tool</button>
-                  </div>
-                </div>
-              </div>
+              // Tools panel content - pass the schema info to ToolsPanel
+              <ToolsPanel schema={schemaInfo} />
             ) : selectedKeyspace === 'settings' ? (
               // Settings panel content
               <div className="settings-panel">
@@ -576,9 +541,6 @@ blocks:
               </div>
             ) : (
               // Regular keyspace/table view          
-          
-          
-
               <>
                 <TableList 
                   tables={Object.entries(schemaInfo.tables)
@@ -611,10 +573,17 @@ blocks:
         </div>
       )}
 
-
-
-
-      
+      {/* Show generated files overlay when files are ready */}
+      {showGeneratedFiles && (
+        <div className="generated-files-overlay">
+          <GeneratedFilesList 
+            files={generatedFiles}
+            onDownloadFile={handleDownloadSingleFile}
+            onDownloadAll={handleDownloadAllFiles}
+            onClose={handleCloseGeneratedFiles}
+          />
+        </div>
+      )}
     </div>
   );
 }
