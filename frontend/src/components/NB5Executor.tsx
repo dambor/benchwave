@@ -11,6 +11,7 @@ interface GeneratedYamlFile {
 interface NB5ExecutorProps {
   generatedYamlFiles: GeneratedYamlFile[];
   schemaInfo: any;
+  executionMode?: 'write' | 'read'; // New prop to determine if we're running write or read workloads
 }
 
 interface Execution {
@@ -31,7 +32,11 @@ interface ExecutionDetails {
   stderr: string[];
 }
 
-const NB5Executor: React.FC<NB5ExecutorProps> = ({ generatedYamlFiles, schemaInfo }) => {
+const NB5Executor: React.FC<NB5ExecutorProps> = ({ 
+  generatedYamlFiles, 
+  schemaInfo,
+  executionMode = 'write' // Default to write mode
+}) => {
   // State for the form
   const [activeTab, setActiveTab] = useState<'execute' | 'history'>('execute');
   const [yamlContent, setYamlContent] = useState<string>('');
@@ -58,6 +63,11 @@ const NB5Executor: React.FC<NB5ExecutorProps> = ({ generatedYamlFiles, schemaInf
   
   // Extract keyspaces from schema info
   const keyspaces = schemaInfo ? Object.keys(schemaInfo.keyspaces) : [];
+
+  // Filter YAML files based on execution mode
+  const filteredYamlFiles = executionMode === 'read'
+    ? generatedYamlFiles.filter(file => file.filename.includes('read'))
+    : generatedYamlFiles.filter(file => !file.filename.includes('read'));
   
   // Load executions when component mounts or tab changes
   useEffect(() => {
@@ -342,7 +352,7 @@ const NB5Executor: React.FC<NB5ExecutorProps> = ({ generatedYamlFiles, schemaInf
   
   return (
     <div className="nb5-executor">
-      <h3>NoSQLBench 5 Executor</h3>
+      <h3>NoSQLBench 5 {executionMode === 'read' ? 'Reader' : 'Loader'}</h3>
       
       <div className="tab-container">
         <div className="tabs">
@@ -366,7 +376,7 @@ const NB5Executor: React.FC<NB5ExecutorProps> = ({ generatedYamlFiles, schemaInf
           <div className="form-container">
           <div className="yaml-select-container">
             <div className="form-group">
-                <label htmlFor="yaml-file-select">Select YAML File</label>
+                <label htmlFor="yaml-file-select">Select {executionMode === 'read' ? 'Read' : 'Write'} YAML File</label>
                 <select
                 id="yaml-file-select"
                 value={selectedYamlFile}
@@ -382,14 +392,14 @@ const NB5Executor: React.FC<NB5ExecutorProps> = ({ generatedYamlFiles, schemaInf
                 className="form-select"
                 >
                 <option value="">-- Select a YAML file --</option>
-                {generatedYamlFiles.map((file, index) => (
+                {filteredYamlFiles.map((file, index) => (
                     <option key={index} value={file.filename}>
                     {file.filename}
                     </option>
                 ))}
                 <option value="custom">Use custom YAML content</option>
                 </select>
-                <div className="help-text">Select a generated YAML file or use custom content</div>
+                <div className="help-text">Select a generated {executionMode === 'read' ? 'read' : 'write'} YAML file or use custom content</div>
             </div>
             </div>
             
@@ -400,7 +410,7 @@ const NB5Executor: React.FC<NB5ExecutorProps> = ({ generatedYamlFiles, schemaInf
                   id="yaml-content"
                   value={yamlContent}
                   onChange={(e) => setYamlContent(e.target.value)}
-                  placeholder="Paste your NoSQLBench YAML content here..."
+                  placeholder={`Paste your NoSQLBench ${executionMode === 'read' ? 'read' : 'write'} YAML content here...`}
                 />
                 <div className="help-text">Paste the YAML content for your NoSQLBench workload</div>
               </div>
@@ -467,7 +477,7 @@ const NB5Executor: React.FC<NB5ExecutorProps> = ({ generatedYamlFiles, schemaInf
                 onClick={handleExecute}
                 disabled={isLoading}
               >
-                {isLoading ? 'Executing...' : 'Execute Workload'}
+                {isLoading ? 'Executing...' : `Execute ${executionMode === 'read' ? 'Read' : 'Write'} Workload`}
               </button>
               
               <button 

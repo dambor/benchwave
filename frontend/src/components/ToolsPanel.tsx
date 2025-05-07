@@ -61,6 +61,7 @@ const ToolsPanel: React.FC<ToolsPanelProps> = ({
   const [selectedKeyspace, setSelectedKeyspace] = useState<string>('');
   const [schemaFile, setSchemaFile] = useState<File | null>(null);
   const [schemaLoading, setSchemaLoading] = useState<boolean>(false);
+  const [nbExecutionMode, setNbExecutionMode] = useState<'write' | 'read'>('write');
   
   // Base API URL - change this if your backend is running on a different port
   const API_BASE_URL = 'http://localhost:8000';
@@ -90,6 +91,14 @@ const ToolsPanel: React.FC<ToolsPanelProps> = ({
   const handleToolSelect = (toolName: string) => {
     setActiveTool(toolName === activeTool ? null : toolName);
     setSelectedKeyspace(''); // Reset keyspace selection when changing tools
+
+    // Set the NB5 execution mode based on the selected tool
+    if (toolName === 'nb5-loader') {
+      setNbExecutionMode('write');
+    } else if (toolName === 'nb5-reader') {
+      setNbExecutionMode('read');
+    }
+
     if (toolName !== activeTool) {
       onSelectAll(false); // Clear table selection when switching tools
     }
@@ -143,29 +152,83 @@ const ToolsPanel: React.FC<ToolsPanelProps> = ({
     }
   };
   
-
-  // Use a constant for the Bench Flow key for consistency
-  const BENCH_FLOW_KEY = 'benchflow';
-  
   return (
     <div className="tools-panel">
-      <h2>Migration Steps</h2>
+      <h2>Migration Flow</h2>
       
       {activeTool ? (
         // Display the active tool
         <div className="active-tool-container">
-          <div className="tool-header">
-            <button 
-              className="back-button"
-              onClick={() => handleToolSelect('null')}
-            >
-              &larr; Back to Tools
-            </button>
+          <div className="tool-header-container">
+            <div className="tool-header">
+              <button 
+                className="back-button"
+                onClick={() => {
+                  // Logic to navigate to previous step
+                  if (activeTool === 'write-yaml-generator') {
+                    // First step, go back to tools overview
+                    handleToolSelect('null');
+                  } else if (activeTool === 'nb5-loader') {
+                    handleToolSelect('write-yaml-generator');
+                  } else if (activeTool === 'dsbulk') {
+                    handleToolSelect('nb5-loader');
+                  } else if (activeTool === 'read-yaml-generator') {
+                    handleToolSelect('dsbulk');
+                  } else if (activeTool === 'nb5-reader') {
+                    handleToolSelect('read-yaml-generator');
+                  } else if (activeTool === 'cdm') {
+                    handleToolSelect('nb5-reader');
+                  }
+                }}
+              >
+                &larr; Previous Step
+              </button>
+              
+              <div className="step-title">
+                <div className="step-number">
+                  Step {activeTool === 'write-yaml-generator' ? '1' : 
+                        activeTool === 'nb5-loader' ? '2' : 
+                        activeTool === 'dsbulk' ? '3' : 
+                        activeTool === 'read-yaml-generator' ? '4' : 
+                        activeTool === 'nb5-reader' ? '5' : '6'} of 6:
+                </div>
+                <h2>
+                  {activeTool === 'write-yaml-generator' ? 'Generate Write YAML Files' : 
+                  activeTool === 'nb5-loader' ? 'Run NB5 Loader' : 
+                  activeTool === 'dsbulk' ? 'DSBulk Unload' : 
+                  activeTool === 'read-yaml-generator' ? 'Generate Read YAML Files' : 
+                  activeTool === 'nb5-reader' ? 'Run NB5 Reader' : 'Migrate Data with CDM'}
+                </h2>
+              </div>
+              
+              <button 
+                className="next-button"
+                onClick={() => {
+                  // Logic to navigate to next step
+                  if (activeTool === 'write-yaml-generator') {
+                    handleToolSelect('nb5-loader');
+                  } else if (activeTool === 'nb5-loader') {
+                    handleToolSelect('dsbulk');
+                  } else if (activeTool === 'dsbulk') {
+                    handleToolSelect('read-yaml-generator');
+                  } else if (activeTool === 'read-yaml-generator') {
+                    handleToolSelect('nb5-reader');
+                  } else if (activeTool === 'nb5-reader') {
+                    handleToolSelect('cdm');
+                  } else if (activeTool === 'cdm') {
+                    // Last step, go back to tools overview
+                    handleToolSelect('null');
+                  }
+                }}
+              >
+                {activeTool === 'cdm' ? 'Finish' : 'Next Step'} &rarr;
+              </button>
+            </div>
           </div>
           
-          {activeTool === 'yaml-generator' && (
+          {activeTool === 'write-yaml-generator' && (
             <div className="write-yaml-tool">
-              <h3>Write YAML Generator</h3>
+              <h3>Generate Write YAML Files</h3>
               <p className="tool-description">
                 Generate NoSQLBench YAML files for selected tables in your Cassandra schema.
                 These files can be used to create ingestion workloads for performance testing.
@@ -238,16 +301,45 @@ const ToolsPanel: React.FC<ToolsPanelProps> = ({
                     onClick={onGenerateYaml}
                     disabled={selectedTables.length === 0 || isLoading}
                   >
-                    {isLoading ? 'Generating...' : 'Generate NoSQLBench YAML Files'}
+                    {isLoading ? 'Generating...' : 'Generate Write YAML Files'}
                   </button>
                 </>
               )}
             </div>
           )}
           
+          {activeTool === 'nb5-loader' && (
+            <div className="nb5-loader-tool">
+              <h3>Run NB5 Loader</h3>
+              <p className="tool-description">
+                Execute NoSQLBench write workloads to load data into your Cassandra database.
+              </p>
+              
+              <NB5Executor
+                generatedYamlFiles={generatedYamlFiles}
+                schemaInfo={schema}
+                executionMode="write"
+              />
+            </div>
+          )}
+          
+          {activeTool === 'dsbulk' && (
+            <div className="dsbulk-tool">
+              <h3>DSBulk Unload</h3>
+              <p className="tool-description">
+                Export data from your Cassandra database using DSBulk to prepare for read testing.
+              </p>
+              
+              <DSBulkUtility 
+                keyspaces={keyspaces} 
+                tables={tablesList} 
+              />
+            </div>
+          )}
+          
           {activeTool === 'read-yaml-generator' && (
             <div className="read-yaml-tool">
-              <h3>Read YAML Generator</h3>
+              <h3>Generate Read YAML Files</h3>
               <p className="tool-description">
                 Create read workload YAML files from existing write YAML files and CSV data.
                 These files can be used for read performance testing with realistic data patterns.
@@ -264,57 +356,55 @@ const ToolsPanel: React.FC<ToolsPanelProps> = ({
             </div>
           )}
           
-          {activeTool === 'dsbulk' && (
-            <DSBulkUtility 
-              keyspaces={keyspaces} 
-              tables={tablesList} 
-            />
-          )}
-          
-          {activeTool === 'nb5' && (
-            <NB5Executor
-              generatedYamlFiles={generatedYamlFiles}
-              schemaInfo={schema}
-            />
+          {activeTool === 'nb5-reader' && (
+            <div className="nb5-reader-tool">
+              <h3>Run NB5 Reader</h3>
+              <p className="tool-description">
+                Execute NoSQLBench read workloads to test performance with realistic data access patterns.
+              </p>
+              
+              <NB5Executor
+                generatedYamlFiles={generatedYamlFiles.filter(file => file.filename.includes('read'))}
+                schemaInfo={schema}
+                executionMode="read"
+              />
+            </div>
           )}
           
           {activeTool === 'cdm' && (
-            <CDMUtility
-              keyspaces={keyspaces}
-              tables={tablesList}
-            />
+            <div className="cdm-tool">
+              <h3>Migrate Data with CDM</h3>
+              <p className="tool-description">
+                Transfer data between Cassandra tables with validation and comprehensive monitoring.
+              </p>
+              
+              <CDMUtility
+                keyspaces={keyspaces}
+                tables={tablesList}
+              />
+            </div>
           )}
         </div>
       ) : (
-        // Display the tools grid
-        <div className="tools-container">
+        // Display the tools grid in the new order
+                  <div className="tools-container">
           <div 
             className="tool-card"
-            onClick={() => handleToolSelect('yaml-generator')}
+            onClick={() => handleToolSelect('write-yaml-generator')}
           >
             <div className="tool-icon yaml-generator-icon"></div>
-            <h3>Write YAML Generator</h3>
-            <p>Generate NoSQLBench write workload YAML files from your Cassandra schema</p>
+            <h3>1. Generate Write YAML Files</h3>
+            <p>Create NoSQLBench write workload YAML files from your Cassandra schema</p>
             <button className="tool-button">Launch Tool</button>
           </div>
 
           <div 
             className="tool-card"
-            onClick={() => handleToolSelect('read-yaml-generator')}
-          >
-            <div className="tool-icon read-yaml-icon"></div>
-            <h3>Read YAML Generator</h3>
-            <p>Create read workload YAML files from write YAMLs and CSV data</p>
-            <button className="tool-button">Launch Tool</button>
-          </div>
-          
-          <div 
-            className="tool-card"
-            onClick={() => handleToolSelect('nb5')}
+            onClick={() => handleToolSelect('nb5-loader')}
           >
             <div className="tool-icon nb5-icon"></div>
-            <h3>NB5 Executor</h3>
-            <p>Execute and monitor NoSQLBench 5 workloads directly from the UI</p>
+            <h3>2. Run NB5 Loader</h3>
+            <p>Execute NoSQLBench write workloads to load data into your database</p>
             <button className="tool-button">Launch Tool</button>
           </div>
           
@@ -323,8 +413,28 @@ const ToolsPanel: React.FC<ToolsPanelProps> = ({
             onClick={() => handleToolSelect('dsbulk')}
           >
             <div className="tool-icon dsbulk-icon"></div>
-            <h3>DSBulk Utility</h3>
-            <p>Generate DSBulk commands for high-performance data loading and unloading</p>
+            <h3>3. DSBulk Unload</h3>
+            <p>Export data from your database to prepare for read testing</p>
+            <button className="tool-button">Launch Tool</button>
+          </div>
+          
+          <div 
+            className="tool-card"
+            onClick={() => handleToolSelect('read-yaml-generator')}
+          >
+            <div className="tool-icon read-yaml-icon"></div>
+            <h3>4. Generate Read YAML Files</h3>
+            <p>Create read workload YAML files from write YAMLs and CSV data</p>
+            <button className="tool-button">Launch Tool</button>
+          </div>
+
+          <div 
+            className="tool-card"
+            onClick={() => handleToolSelect('nb5-reader')}
+          >
+            <div className="tool-icon nb5-reader-icon"></div>
+            <h3>5. Run NB5 Reader</h3>
+            <p>Execute NoSQLBench read workloads to test performance</p>
             <button className="tool-button">Launch Tool</button>
           </div>
           
@@ -333,23 +443,9 @@ const ToolsPanel: React.FC<ToolsPanelProps> = ({
             onClick={() => handleToolSelect('cdm')}
           >
             <div className="tool-icon cdm-icon"></div>
-            <h3>Cassandra Data Migration</h3>
-            <p>Migrate data between tables with validation and monitoring features</p>
+            <h3>6. Migrate Data with CDM</h3>
+            <p>Transfer data between tables with validation and monitoring</p>
             <button className="tool-button">Launch Tool</button>
-          </div>
-          
-          <div className="tool-card">
-            <div className="tool-icon analyzer-icon"></div>
-            <h3>Schema Analyzer</h3>
-            <p>Analyze your Cassandra schema and get optimization recommendations</p>
-            <button className="tool-button">Coming Soon</button>
-          </div>
-          
-          <div className="tool-card">
-            <div className="tool-icon validator-icon"></div>
-            <h3>YAML Validator</h3>
-            <p>Validate your NoSQLBench YAML files for syntax and logic errors</p>
-            <button className="tool-button">Coming Soon</button>
           </div>
         </div>
       )}
