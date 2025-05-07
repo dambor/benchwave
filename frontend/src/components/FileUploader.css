@@ -1,0 +1,58 @@
+/* src/components/FileUploader.css */
+.file-uploader {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .file-uploader-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #2563eb;
+    cursor: pointer;
+    padding: 6px 0;
+  }
+  
+  .file-uploader-label:hover {
+    color: #1d4ed8;
+  }
+  
+  .file-icon {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%232563eb'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' /%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: center;
+  }
+  
+  .file-input {
+    display: none;
+  }
+  
+  .file-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    color: #4b5563;
+    background-color: #f3f4f6;
+    padding: 8px 12px;
+    border-radius: 4px;
+  }
+  
+  .file-name {
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 250px;
+  }
+  
+  .file-size {
+    color: #6b7280;
+    white-space: nowrap;
+  }

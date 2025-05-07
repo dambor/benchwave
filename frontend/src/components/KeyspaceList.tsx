@@ -16,7 +16,7 @@ const KeyspaceList: React.FC<KeyspaceListProps> = ({
 }) => {
   return (
     <div className="keyspace-list">
-      <h2>Keyspaces</h2>
+      <h2>Navigation</h2>
       <ul>
         <li 
           className={!selectedKeyspace ? 'selected' : ''}
@@ -35,6 +35,24 @@ const KeyspaceList: React.FC<KeyspaceListProps> = ({
             {keyspace.name}
           </li>
         ))}
+
+        <li className="section-divider"></li>
+        
+        <li 
+          className={selectedKeyspace === 'tools' ? 'selected' : ''}
+          onClick={() => onKeyspaceSelect('tools')}
+        >
+          <span className="tools-icon"></span>
+          Tools
+        </li>
+        
+        <li 
+          className={selectedKeyspace === 'settings' ? 'selected' : ''}
+          onClick={() => onKeyspaceSelect('settings')}
+        >
+          <span className="settings-icon"></span>
+          Settings
+        </li>        
       </ul>
     </div>
   );

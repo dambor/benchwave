@@ -8,6 +8,7 @@ interface TableListProps {
   selectedTables: string[];
   onTableSelect: (tableName: string, isSelected: boolean) => void;
   onSelectAll: (isSelected: boolean) => void;
+  onDownloadTable?: (tableName: string) => void; // New prop
   keyspace: string;
 }
 
@@ -16,6 +17,7 @@ const TableList: React.FC<TableListProps> = ({
   selectedTables, 
   onTableSelect,
   onSelectAll,
+  onDownloadTable,
   keyspace
 }) => {
   const isAllSelected = tables.length > 0 && 
@@ -54,12 +56,20 @@ const TableList: React.FC<TableListProps> = ({
               <th>Keyspace</th>
               <th>Columns</th>
               <th>Primary Key</th>
+              {onDownloadTable && <th className="action-column">Action</th>}
             </tr>
           </thead>
           <tbody>
             {tables.map((table) => {
               const isSelected = selectedTables.includes(table.fullName);
-              const primaryKeyColumns = table.primary_key.flat().join(', ');
+              // Format the primary key to show the values in the correct format
+              const primaryKeyColumns = table.primary_key.map((group, index) => {
+                // For the first group (partition key), add parentheses if there are multiple columns
+                if (index === 0 && group.length > 1) {
+                  return `(${group.join(', ')})`;
+                }
+                return group.join(', ');
+              }).join(', ');
               
               return (
                 <tr key={table.fullName} className={isSelected ? 'selected' : ''}>
@@ -74,6 +84,17 @@ const TableList: React.FC<TableListProps> = ({
                   <td>{table.keyspace}</td>
                   <td>{Object.keys(table.columns).length}</td>
                   <td className="primary-key">{primaryKeyColumns}</td>
+                  {onDownloadTable && (
+                    <td>
+                      <button 
+                        className="download-single-button"
+                        onClick={() => onDownloadTable(table.fullName)}
+                        title="Download YAML for this table"
+                      >
+                        ⬇️
+                      </button>
+                    </td>
+                  )}
                 </tr>
               );
             })}

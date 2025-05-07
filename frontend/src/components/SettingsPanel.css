@@ -1,0 +1,142 @@
+/* src/components/SettingsPanel.css - Add this to your project */
+.settings-panel {
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+  }
+  
+  .settings-panel h2 {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0 0 20px 0;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  
+  .settings-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 24px;
+  }
+  
+  .settings-section {
+    margin-bottom: 24px;
+  }
+  
+  .settings-section h3 {
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0 0 16px 0;
+    color: #1f2937;
+  }
+  
+  .settings-row {
+    margin-bottom: 16px;
+    display: grid;
+    grid-template-columns: 150px 1fr;
+    align-items: center;
+    gap: 12px;
+  }
+  
+  .settings-row label {
+    font-size: 14px;
+    font-weight: 500;
+    color: #4b5563;
+  }
+  
+  .settings-row input[type="text"],
+  .settings-row input[type="number"],
+  .settings-row input[type="password"],
+  .settings-row select {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    font-size: 14px;
+  }
+  
+  .settings-row input:focus,
+  .settings-row select:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+  }
+  
+  .checkbox-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    grid-template-columns: auto 1fr;
+  }
+  
+  .checkbox-row input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+  }
+  
+  .input-with-button {
+    display: flex;
+    gap: 8px;
+  }
+  
+  .input-with-button input {
+    flex: 1;
+  }
+  
+  .browse-button {
+    padding: 8px 12px;
+    background-color: #f3f4f6;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #4b5563;
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+  
+  .browse-button:hover {
+    background-color: #e5e7eb;
+  }
+  
+  .settings-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 24px;
+    padding-top: 16px;
+    border-top: 1px solid #e5e7eb;
+  }
+  
+  .save-settings-button {
+    padding: 10px 16px;
+    background-color: #2563eb;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+  
+  .save-settings-button:hover {
+    background-color: #1d4ed8;
+  }
+  
+  .reset-settings-button {
+    padding: 10px 16px;
+    background-color: #f3f4f6;
+    color: #4b5563;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+  
+  .reset-settings-button:hover {
+    background-color: #e5e7eb;
+  }

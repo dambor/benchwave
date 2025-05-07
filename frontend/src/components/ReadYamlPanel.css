@@ -1,0 +1,236 @@
+/* src/components/ReadYamlPanel.css */
+.read-yaml-panel {
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+
+.panel-header {
+  padding: 16px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.panel-header h2 {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0;
+  color: #111827;
+}
+
+.panel-content {
+  padding: 20px;
+}
+
+/* File upload section */
+.file-upload-section {
+  background-color: #f9fafb;
+  border: 2px dashed #d1d5db;
+  border-radius: 6px;
+  padding: 20px;
+  text-align: center;
+  margin-bottom: 20px;
+  transition: border-color 0.2s;
+  position: relative;
+}
+
+.file-upload-section:hover {
+  border-color: #2563eb;
+}
+
+.file-upload-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+}
+
+.upload-icon {
+  width: 48px;
+  height: 48px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%232563eb'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12' /%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+  margin-bottom: 12px;
+}
+
+.upload-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.upload-text strong {
+  font-size: 16px;
+  color: #111827;
+}
+
+.upload-text span {
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.file-input {
+  display: none;
+}
+
+/* Selected files display */
+.selected-files {
+  margin-top: 16px;
+  text-align: left;
+  max-height: 200px;
+  overflow-y: auto;
+  background-color: white;
+  border-radius: 4px;
+  border: 1px solid #e5e7eb;
+}
+
+.files-count {
+  padding: 8px 12px;
+  font-size: 14px;
+  font-weight: 500;
+  background-color: #f3f4f6;
+  border-bottom: 1px solid #e5e7eb;
+  color: #4b5563;
+}
+
+.files-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.selected-file-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.selected-file-item:last-child {
+  border-bottom: none;
+}
+
+.file-icon {
+  font-size: 18px;
+}
+
+.file-details {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.file-name {
+  font-size: 14px;
+  color: #111827;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.file-size {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+/* CSV section form styles */
+.csv-section {
+  margin-top: 24px;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 8px;
+  color: #374151;
+}
+
+.text-input {
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.text-input:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.help-text {
+  font-size: 12px;
+  color: #6b7280;
+  margin-top: 6px;
+}
+
+.validation-error {
+  background-color: #fee2e2;
+  color: #b91c1c;
+  padding: 10px 12px;
+  border-radius: 6px;
+  font-size: 14px;
+  margin-bottom: 20px;
+  border-left: 3px solid #ef4444;
+}
+
+/* Generate button */
+.generate-read-button {
+  display: block;
+  width: 100%;
+  padding: 12px;
+  background-color: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  margin-bottom: 20px;
+}
+
+.generate-read-button:hover:not(:disabled) {
+  background-color: #1d4ed8;
+}
+
+.generate-read-button:disabled {
+  background-color: #93c5fd;
+  cursor: not-allowed;
+}
+
+/* Information section */
+.note-section {
+  background-color: #f9fafb;
+  border-radius: 6px;
+  padding: 16px;
+}
+
+.note-section h3 {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0 0 12px 0;
+  color: #111827;
+}
+
+.note-section p {
+  font-size: 14px;
+  line-height: 1.5;
+  color: #4b5563;
+  margin: 0 0 12px 0;
+}
+
+.note-section p:last-child {
+  margin-bottom: 0;
+}
