@@ -7,6 +7,9 @@ import zipfile
 import json
 import os
 from schema_parser import CQLParser
+from dsbulk_utils import DSBulkManager
+import tempfile
+
 
 app = FastAPI(title="NoSQLBench Schema Generator")
 
@@ -21,6 +24,9 @@ app.add_middleware(
 
 # Initialize the CQL parser
 parser = CQLParser()
+
+# Initialize the DSBulk manager
+dsbulk_manager = DSBulkManager()
 
 # In-memory cache for the latest parsed schema
 SCHEMA_CACHE = {}
@@ -346,6 +352,153 @@ async def generate_read_yaml_json(
         })
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error generating read YAML: {str(e)}")
+
+@app.get("/api/dsbulk/validate")
+async def validate_dsbulk():
+    """Validate that the DSBulk JAR exists"""
+    is_valid = dsbulk_manager.validate_dsbulk_path()
+    return {
+        "valid": is_valid,
+        "path": dsbulk_manager.dsbulk_path
+    }
+
+@app.post("/api/dsbulk/generate-commands")
+async def generate_dsbulk_commands(
+    keyspace: str = Form(..., description="Keyspace name"),
+    table: str = Form(..., description="Table name"),
+    operation: str = Form(..., description="Operation type (unload, load, count)"),
+    primary_key: Optional[str] = Form(None, description="Primary key column for unload"),
+    output_path: Optional[str] = Form(None, description="Output path for unload"),
+    csv_path: Optional[str] = Form(None, description="CSV path for load"),
+    limit: Optional[int] = Form(1000000, description="Limit for unload query")
+):
+    """Generate DSBulk command(s) based on given parameters"""
+    
+    try:
+        if operation == "unload":
+            if not primary_key:
+                raise HTTPException(status_code=400, detail="Primary key is required for unload operations")
+            if not output_path:
+                raise HTTPException(status_code=400, detail="Output path is required for unload operations")
+                
+            command = dsbulk_manager.generate_unload_command(
+                keyspace=keyspace,
+                table=table,
+                primary_key=primary_key,
+                output_path=output_path,
+                limit=limit
+            )
+            
+            return {
+                "command": command,
+                "operation": operation,
+                "description": f"Exports {primary_key} values from {keyspace}.{table} to {output_path}"
+            }
+            
+        elif operation == "load":
+            if not csv_path:
+                raise HTTPException(status_code=400, detail="CSV path is required for load operations")
+                
+            command = dsbulk_manager.generate_load_command(
+                keyspace=keyspace,
+                table=table,
+                csv_path=csv_path
+            )
+            
+            return {
+                "command": command,
+                "operation": operation,
+                "description": f"Imports data from {csv_path} into {keyspace}.{table}"
+            }
+            
+        elif operation == "count":
+            command = dsbulk_manager.generate_count_command(
+                keyspace=keyspace,
+                table=table
+            )
+            
+            return {
+                "command": command,
+                "operation": operation,
+                "description": f"Counts rows in {keyspace}.{table}"
+            }
+            
+        else:
+            raise HTTPException(status_code=400, detail=f"Unsupported operation: {operation}")
+            
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error generating DSBulk command: {str(e)}")
+
+@app.post("/api/dsbulk/execute")
+async def execute_dsbulk_command(
+    command: str = Form(..., description="DSBulk command to execute"),
+    save_output: bool = Form(False, description="Whether to save command output to a file")
+):
+    """Execute a DSBulk command and return the result"""
+    
+    # Security check - very basic, additional validation recommended
+    if ";" in command or "&" in command or "|" in command:
+        raise HTTPException(status_code=400, detail="Invalid command: contains disallowed characters")
+    
+    try:
+        result = dsbulk_manager.execute_command(command)
+        
+        if save_output and result["success"]:
+            # Save output to a temporary file
+            fd, temp_path = tempfile.mkstemp(suffix='.txt')
+            with os.fdopen(fd, 'w') as f:
+                f.write("STDOUT:\n")
+                f.write(result["stdout"])
+                f.write("\n\nSTDERR:\n")
+                f.write(result["stderr"])
+            
+            result["output_file"] = temp_path
+        
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error executing DSBulk command: {str(e)}")
+
+@app.post("/api/dsbulk/download-script")
+async def download_dsbulk_script(
+    keyspace: str = Form(..., description="Keyspace name"),
+    table: str = Form(..., description="Table name"),
+    primary_key: str = Form(..., description="Primary key column"),
+    output_path: str = Form(..., description="Output path for CSV"),
+    limit: Optional[int] = Form(1000000, description="Limit for unload query")
+):
+    """Generate a DSBulk unload script and return it for download"""
+    
+    try:
+        # Generate the command
+        command = dsbulk_manager.generate_unload_command(
+            keyspace=keyspace,
+            table=table,
+            primary_key=primary_key,
+            output_path=output_path,
+            limit=limit
+        )
+        
+        # Create a shell script with the command
+        script_content = "#!/bin/bash\n\n"
+        script_content += "# DSBulk unload script generated by NoSQLBench Schema Generator\n"
+        script_content += f"# Exports data from {keyspace}.{table}\n\n"
+        script_content += command
+        script_content += "\n\n# End of script\n"
+        
+        # Return the script for download
+        filename = f"dsbulk_unload_{keyspace}_{table}.sh"
+        
+        return StreamingResponse(
+            io.StringIO(script_content),
+            media_type="text/plain",
+            headers={
+                "Content-Disposition": f"attachment; filename={filename}",
+                "Content-Type": "text/plain; charset=utf-8"
+            }
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error generating DSBulk script: {str(e)}")
 
 @app.get("/api/health")
 async def health_check():
