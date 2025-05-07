@@ -1,4 +1,4 @@
-/* src/components/ReadYamlPanel.css - Updated with code example styling */
+/* src/components/ReadYamlPanel.css */
 .read-yaml-panel {
   background-color: white;
   border-radius: 8px;
@@ -19,42 +19,11 @@
   color: #111827;
 }
 
-/* Internal tabs for Read Mode */
-.read-mode-tabs {
-  display: flex;
-  background-color: #f9fafb;
-  border-bottom: 1px solid #e5e7eb;
-}
-
-.read-mode-tab {
-  flex: 1;
-  padding: 12px;
-  font-size: 14px;
-  font-weight: 500;
-  background-color: transparent;
-  border: none;
-  border-bottom: 2px solid transparent;
-  cursor: pointer;
-  transition: all 0.2s;
-  text-align: center;
-  color: #6b7280;
-}
-
-.read-mode-tab.active {
-  color: #2563eb;
-  border-bottom-color: #2563eb;
-  background-color: white;
-}
-
-.read-mode-tab:hover:not(.active) {
-  background-color: #f3f4f6;
-}
-
 .panel-content {
   padding: 20px;
 }
 
-/* Shared styles for both tabs */
+/* File upload section */
 .file-upload-section {
   background-color: #f9fafb;
   border: 2px dashed #d1d5db;
@@ -106,7 +75,7 @@
   display: none;
 }
 
-/* Multiple file selection styles */
+/* Selected files display */
 .selected-files {
   margin-top: 16px;
   text-align: left;
@@ -168,7 +137,11 @@
   color: #6b7280;
 }
 
-/* CSV tab specific styles */
+/* CSV section form styles */
+.csv-section {
+  margin-top: 24px;
+}
+
 .form-group {
   margin-bottom: 20px;
 }
@@ -179,34 +152,6 @@
   font-weight: 500;
   margin-bottom: 8px;
   color: #374151;
-}
-
-.file-input-wrapper {
-  position: relative;
-}
-
-.custom-file-upload {
-  background-color: #f9fafb;
-  border: 2px dashed #d1d5db;
-  border-radius: 6px;
-  padding: 20px;
-  text-align: center;
-  cursor: pointer;
-  transition: border-color 0.2s;
-}
-
-.custom-file-upload:hover {
-  border-color: #2563eb;
-}
-
-.selected-file {
-  margin-top: 12px;
-  padding: 10px;
-  background-color: #eff6ff;
-  border: 1px solid #bfdbfe;
-  border-radius: 6px;
-  display: flex;
-  align-items: center;
 }
 
 .text-input {
@@ -288,23 +233,4 @@
 
 .note-section p:last-child {
   margin-bottom: 0;
-}
-
-/* Code example styling */
-.code-example {
-  margin-top: 16px;
-  background-color: #1f2937;
-  border-radius: 6px;
-  overflow: hidden;
-}
-
-.code-example pre {
-  margin: 0;
-  padding: 16px;
-  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
-  font-size: 13px;
-  line-height: 1.5;
-  color: #e5e7eb;
-  overflow-x: auto;
-  white-space: pre-wrap;
 }

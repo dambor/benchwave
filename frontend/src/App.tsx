@@ -1,10 +1,11 @@
-// src/App.tsx - Updated to integrate CSV functionality into Read mode
+// src/App.tsx - Updated to include ToolsPanel
 import React, { useState, useEffect } from 'react';
 import './App.css';
 import KeyspaceList from './components/KeyspaceList';
 import TableList from './components/TableList';
 import ConfigurationPanel from './components/ConfigurationPanel';
 import ReadYamlPanel from './components/ReadYamlPanel';
+import ToolsPanel from './components/ToolsPanel'; // Import the new ToolsPanel component
 import GeneratedFilesList from './components/GeneratedFilesList';
 import { SchemaInfo, Table, Keyspace, Configuration, GeneratedYamlFile } from './types';
 
@@ -285,48 +286,133 @@ function App() {
     }
   };
 
+  // Generate read YAML locally to avoid server issues
+  const generateReadYamlLocally = (
+    writeYamlFile: File, 
+    csvPath: string, 
+    primaryKeyColumns: string,
+    readCycles: number = 1000
+  ): Promise<{filename: string, content: string, table_name: string}> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      
+      reader.onload = (event) => {
+        try {
+          const writeYamlContent = event.target?.result as string;
+          
+          // Extract keyspace and table name from the write YAML
+          let keyspace = 'baselines'; // Default keyspace
+          let tableName = '';
+          
+          // Try to extract table name from CREATE TABLE statement
+          const createTableMatch = writeYamlContent.match(/CREATE\s+TABLE\s+if\s+not\s+exists\s+<<keyspace:([^>]+)>>\.(\w+)/i);
+          if (createTableMatch) {
+            keyspace = createTableMatch[1];
+            tableName = createTableMatch[2];
+          } else {
+            // Try alternative pattern
+            const altMatch = writeYamlContent.match(/CREATE\s+TABLE\s+if\s+not\s+exists\s+(\w+)\.(\w+)/i);
+            if (altMatch) {
+              keyspace = altMatch[1];
+              tableName = altMatch[2];
+            }
+          }
+          
+          // If still no table name, try to extract from INSERT statement
+          if (!tableName) {
+            const insertMatch = writeYamlContent.match(/insert\s+into\s+<<keyspace:([^>]+)>>\.(\w+)/i);
+            if (insertMatch) {
+              keyspace = insertMatch[1];
+              tableName = insertMatch[2];
+            } else {
+              // Try alternative pattern
+              const altInsertMatch = writeYamlContent.match(/insert\s+into\s+(\w+)\.(\w+)/i);
+              if (altInsertMatch) {
+                keyspace = altInsertMatch[1];
+                tableName = altInsertMatch[2];
+              }
+            }
+          }
+          
+          // If still no table name, use the file name
+          if (!tableName) {
+            const fileName = writeYamlFile.name;
+            tableName = fileName.split('.')[0].replace('_write', '');
+          }
+          
+          // Parse primary key columns
+          const pkColumns = primaryKeyColumns.split(',').map(col => col.trim());
+          
+          if (pkColumns.length === 0) {
+            reject(new Error('At least one primary key column must be specified'));
+            return;
+          }
+          
+          // Generate the read YAML content
+          const primaryKeyColumn = pkColumns[0]; // Use the first column for the CSVSampler
+          const selectedColumns = [...pkColumns, 'insertedtimestamp'].join(', ');
+          
+          const readYamlContent = `scenarios:
+  default:
+    read1: run driver=cql tags='block:read1' cycles==TEMPLATE(read-cycles,${readCycles}) threads=auto
+
+bindings:
+  ${primaryKeyColumn}: CSVSampler('${primaryKeyColumn}','${primaryKeyColumn}-weight','${csvPath}');
+
+blocks:
+  read1:
+    params:
+      cl: TEMPLATE(read_cl,LOCAL_QUORUM)
+      instrument: true
+      prepared: true
+    ops:
+      read_by_${primaryKeyColumn}: |
+        SELECT ${selectedColumns}
+        FROM <<keyspace:${keyspace}>>.${tableName}
+        WHERE ${primaryKeyColumn} = {${primaryKeyColumn}}
+        LIMIT 1;
+`;
+
+          // Create the filename
+          const baseName = writeYamlFile.name.replace('.yaml', '').replace('.yml', '');
+          const filename = `${baseName}_read.yaml`;
+          
+          resolve({
+            filename,
+            content: readYamlContent,
+            table_name: tableName
+          });
+          
+        } catch (error) {
+          reject(new Error(`Failed to generate read YAML: ${error}`));
+        }
+      };
+      
+      reader.onerror = () => {
+        reject(new Error('Error reading the file'));
+      };
+      
+      reader.readAsText(writeYamlFile);
+    });
+  };
+
   // Handler for generating read YAML from CSV
-  const handleGenerateFromCsv = async (writeYamlFile: File, csvPath: string, primaryKeyColumns: string) => {
+  const handleGenerateFromCsv = async (writeYamlFile: File, csvPath: string, primaryKeyColumns: string, readCycles?: number) => {
     setCsvReadLoading(true);
     setError(null);
     setGeneratedFiles([]);
 
-    const formData = new FormData();
-    formData.append('write_yaml_file', writeYamlFile);
-    formData.append('csv_path', csvPath);
-    formData.append('primary_key_columns', primaryKeyColumns);
-    
-    // Add configuration parameters
-    formData.append('num_cycles', configuration.numCycles.toString());
-    formData.append('num_threads', configuration.numThreads.toString());
-    formData.append('consistency_level', configuration.consistencyLevel);
-
     try {
-      // Using the JSON endpoint to get the generated YAML content
-      const response = await fetch(`${API_BASE_URL}/api/generate-read-from-write-csv-json`, {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Failed to generate read YAML from CSV');
-      }
-
-      // Parse the JSON response
-      const data = await response.json();
+      // Use the local generator instead of making a backend request
+      const generatedYaml = await generateReadYamlLocally(
+        writeYamlFile, 
+        csvPath, 
+        primaryKeyColumns,
+        readCycles || configuration.numCycles
+      );
       
-      // Create a standard format for the generated files list
-      const formattedFiles: GeneratedYamlFile[] = [
-        {
-          filename: data.filename || 'read.yaml',
-          content: data.content || '',
-          table_name: data.table_name || 'unknown_table'
-        }
-      ];
-      
-      // Update the state with generated files
-      setGeneratedFiles(formattedFiles);
+      // Update the state with the generated file
+      setGeneratedFiles([generatedYaml]);
       setShowGeneratedFiles(true);
       
     } catch (error) {
@@ -383,6 +469,10 @@ function App() {
               }))}
               selectedKeyspace={selectedKeyspace}
               onKeyspaceSelect={handleKeyspaceSelect}
+            />
+            
+            {/* Add the Tools Panel here */}
+            <ToolsPanel 
             />
           </div>
           
@@ -447,7 +537,7 @@ function App() {
               </>
             )}
             
-            {/* Read Mode Content - Updated with internal tabs for YAML files and CSV */}
+            {/* Read Mode Content */}
             {activeMode === 'read' && !showGeneratedFiles && (
               <ReadYamlPanel 
                 onFilesSelected={handleIngestFilesChange}

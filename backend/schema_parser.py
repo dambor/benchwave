@@ -365,99 +365,278 @@ class CQLParser:
         
         return "\n".join(yaml_content)
 
-    def generate_read_yaml_from_write_and_csv(
-        self, 
-        write_yaml: str, 
-        csv_file_path: str, 
-        primary_key_columns: List[str]
-    ) -> str:
-        """Generate a read YAML file from a write YAML file, DSBulk CSV path, and primary key columns"""
+def generate_read_yaml_from_write_and_csv(
+    self, 
+    write_yaml: str, 
+    csv_file_path: str, 
+    primary_key_columns: List[str]
+) -> str:
+    """Generate a read YAML file from a write YAML file, DSBulk CSV path, and primary key columns"""
+    try:
+        # Preprocess the YAML to fix common syntax issues
+        preprocessed_yaml = self._preprocess_yaml(write_yaml)
+        
+        # Extract the write YAML to get the table name
+        yaml_data = None
         try:
-            # Extract the write YAML to get the table name
-            yaml_data = None
-            try:
-                yaml_data = yaml.safe_load(write_yaml)
-            except Exception as e:
-                return f"# Error parsing write YAML: {str(e)}\n{write_yaml}"
-            
-            # Extract table name from the write YAML
-            table_name = None
-            keyspace = 'baselines'  # Default keyspace
-            
+            yaml_data = yaml.safe_load(preprocessed_yaml)
+        except Exception as e:
+            # If still failing, try a regex-based approach
+            return self._generate_read_yaml_from_text(preprocessed_yaml, csv_file_path, primary_key_columns)
+        
+        # Extract table name from the write YAML
+        table_name = None
+        keyspace = 'baselines'  # Default keyspace
+        
+        if yaml_data and 'blocks' in yaml_data:
+            for block_name, block_data in yaml_data['blocks'].items():
+                if 'ops' in block_data:
+                    for op_name, op_value in block_data['ops'].items():
+                        if isinstance(op_value, str) and 'insert into' in op_value.lower():
+                            # Extract table name from insert statement
+                            table_match = self.insert_table_pattern.search(op_value)
+                            if table_match:
+                                if table_match.group(1):
+                                    keyspace = table_match.group(1)
+                                table_name = table_match.group(2)
+                                break
+                    if table_name:
+                        break
+        
+        if not table_name:
+            # Try to extract from CREATE TABLE statement
             if yaml_data and 'blocks' in yaml_data:
                 for block_name, block_data in yaml_data['blocks'].items():
                     if 'ops' in block_data:
                         for op_name, op_value in block_data['ops'].items():
-                            if isinstance(op_value, str) and 'insert into' in op_value.lower():
-                                # Extract table name from insert statement
-                                table_match = self.insert_table_pattern.search(op_value)
+                            if isinstance(op_value, str) and 'CREATE TABLE' in op_value:
+                                # Extract table name from create statement
+                                table_match = re.search(r'CREATE\s+TABLE\s+if\s+not\s+exists\s+<<keyspace:([^>]+)>>\.(\w+)', op_value)
                                 if table_match:
-                                    if table_match.group(1):
-                                        keyspace = table_match.group(1)
+                                    keyspace = table_match.group(1)
                                     table_name = table_match.group(2)
+                                    break
+                                # Try alternative pattern
+                                alt_match = re.search(r'CREATE\s+TABLE\s+if\s+not\s+exists\s+(\w+)\.(\w+)', op_value)
+                                if alt_match:
+                                    keyspace = alt_match.group(1)
+                                    table_name = alt_match.group(2)
                                     break
                         if table_name:
                             break
+        
+        if not table_name:
+            # Try to find table name in the filename
+            if hasattr(write_yaml, 'filename'):
+                filename = write_yaml.filename
+                parts = os.path.basename(filename).split('_')
+                if len(parts) > 0:
+                    table_name = parts[-1].split('.')[0]
+        
+        if not table_name:
+            return "# Error: Could not determine table name from write YAML"
+        
+        # Determine columns for the select statement
+        columns = []
+        
+        # Always include the primary key columns
+        columns.extend(primary_key_columns)
+        
+        # Try to find other columns that might be interesting for read operations
+        timestamp_cols = ['insertedtimestamp', 'created_at', 'timestamp', 'last_updated']
+        for col in timestamp_cols:
+            if yaml_data and 'bindings' in yaml_data and col in yaml_data['bindings']:
+                if col not in columns:
+                    columns.append(col)
+        
+        # If no timestamp column found, add a default one
+        if not any(col in columns for col in timestamp_cols):
+            columns.append('insertedtimestamp')
+        
+        # Create the read YAML
+        read_yaml_lines = [
+            "scenarios:",
+            "  default:",
+            f"    read1: run driver=cql tags='block:read1' cycles==TEMPLATE(read-cycles,1000) threads=auto",
+            "",
+            "bindings:"
+        ]
+        
+        # Primary key in CSVSampler format
+        primary_key_column = primary_key_columns[0]  # Use the first primary key column for CSVSampler
+        read_yaml_lines.append(f"  {primary_key_column}: CSVSampler('{primary_key_column}','{primary_key_column}-weight','{csv_file_path}');")
+        read_yaml_lines.append("")
+        
+        # Add blocks section
+        read_yaml_lines.extend([
+            "blocks:",
+            "  read1:",
+            "    params:",
+            "      cl: TEMPLATE(read_cl,LOCAL_QUORUM)",
+            "      instrument: true",
+            "      prepared: true",
+            "    ops:",
+            f"      read_by_{primary_key_column}: |"
+        ])
+        
+        # Create a SELECT statement with primary key as WHERE clause
+        selected_columns = ", ".join(columns)
+        select_statement = [
+            f"        SELECT {selected_columns}",
+            f"        FROM <<keyspace:{keyspace}>>.{table_name}",
+            f"        WHERE {primary_key_column} = {{{primary_key_column}}}"
+        ]
+        
+        # Add additional primary key columns to WHERE clause if any
+        for i, pk_col in enumerate(primary_key_columns[1:], 1):
+            select_statement.append(f"        AND {pk_col} = {{{pk_col}}}")
+        
+        select_statement.append("        LIMIT 1;")
+        
+        # Add select statement to YAML
+        read_yaml_lines.extend(select_statement)
+        
+        return "\n".join(read_yaml_lines)
             
-            if not table_name:
-                # Try to find table name in the filename
-                if 'filename' in write_yaml:
-                    filename = write_yaml['filename']
-                    parts = os.path.basename(filename).split('_')
-                    if len(parts) > 0:
-                        table_name = parts[-1].split('.')[0]
-            
-            if not table_name:
-                return "# Error: Could not determine table name from write YAML"
-            
-            # Create the read YAML
-            read_yaml_lines = [
-                "scenarios:",
-                "  default:",
-                f"    read1: run driver=cql tags='block:read1' cycles==TEMPLATE(read-cycles,1000) threads=auto",
-                "",
-                "bindings:"
-            ]
-            
-            # Primary key in CSVSampler format
-            primary_key_column = primary_key_columns[0]  # Use the first primary key column for CSVSampler
-            read_yaml_lines.append(f"  {primary_key_column}: CSVSampler('{primary_key_column}','{primary_key_column}-weight','{csv_file_path}');")
-            read_yaml_lines.append("")
-            
-            # Add blocks section
-            read_yaml_lines.extend([
-                "blocks:",
-                "  read1:",
-                "    params:",
-                "      cl: TEMPLATE(read_cl,LOCAL_QUORUM)",
-                "      instrument: true",
-                "      prepared: true",
-                "    ops:",
-                f"      read_by_{primary_key_column}: |"
-            ])
-            
-            # Create a SELECT statement with primary key as WHERE clause
-            selected_columns = ", ".join(primary_key_columns + ["insertedtimestamp"])  # Include timestamp
-            select_statement = [
-                f"        SELECT {selected_columns}",
-                f"        FROM <<keyspace:{keyspace}>>.{table_name}",
-                f"        WHERE {primary_key_column} = {{{primary_key_column}}}"
-            ]
-            
-            # Add additional primary key columns to WHERE clause if any
-            for i, pk_col in enumerate(primary_key_columns[1:], 1):
-                select_statement.append(f"        AND {pk_col} = {{{pk_col}}}")
-            
-            select_statement.append("        LIMIT 1;")
-            
-            # Add select statement to YAML
-            read_yaml_lines.extend(select_statement)
-            
-            return "\n".join(read_yaml_lines)
-            
-        except Exception as e:
-            # If there's an error, return a comment explaining the error
-            return f"# Error generating read YAML: {str(e)}"
+    except Exception as e:
+        # If there's an error, return a comment explaining the error
+        return f"# Error generating read YAML: {str(e)}"
+
+def _preprocess_yaml(self, yaml_content: str) -> str:
+    """Preprocess YAML content to fix common syntax issues"""
+    if isinstance(yaml_content, bytes):
+        yaml_content = yaml_content.decode('utf-8')
+    
+    # Fix common issues:
+    
+    # 1. Remove trailing semicolons in bindings section
+    lines = yaml_content.split('\n')
+    in_bindings = False
+    
+    for i, line in enumerate(lines):
+        if line.strip() == 'bindings:':
+            in_bindings = True
+        elif line.strip() and line[0] not in ' \t' and in_bindings:
+            in_bindings = False
+        
+        if in_bindings and ':' in line and line.rstrip().endswith(';'):
+            binding_parts = line.split(':', 1)
+            binding_name = binding_parts[0]
+            binding_value = binding_parts[1].rstrip(';')
+            lines[i] = f"{binding_name}:{binding_value}"
+    
+    # 2. Fix extra commas in CREATE TABLE statements
+    content = '\n'.join(lines)
+    content = re.sub(r',(\s*PRIMARY\s+KEY)', r'\1', content)
+    content = re.sub(r',\s*\)', r'\n)', content)
+    
+    # 3. Fix standalone semicolons
+    content = re.sub(r'^\s*;\s*$', '', content, flags=re.MULTILINE)
+    
+    # 4. Fix CREATE TABLE statements ending with semicolon on a separate line
+    content = re.sub(r'\)\s*\n\s*;', r'\);', content)
+    
+    # 5. Fix INSERT statements with trailing commas before values or closing parentheses
+    content = re.sub(r',\s*\)\s*values', r'\n) values', content, flags=re.MULTILINE | re.IGNORECASE)
+    content = re.sub(r',\s*\);', r'\n);', content, flags=re.MULTILINE)
+    
+    # Fix YAML structure issues (indentation, etc.)
+    lines = content.split('\n')
+    for i, line in enumerate(lines):
+        # Fix indentation for rampup1 section
+        if line.strip() == 'rampup1:' and i > 0 and lines[i-1].strip().endswith(';'):
+            indent = re.match(r'(\s*)', line).group(1)
+            if len(indent) == 0:
+                lines[i] = '  ' + line
+        
+        # Fix indentation for params, ops, etc.
+        if any(key in line for key in ['params:', 'ops:', 'instrument:', 'prepared:']) and ':' in line:
+            if len(re.match(r'(\s*)', line).group(1)) == 0:
+                lines[i] = '    ' + line
+    
+    return '\n'.join(lines)
+
+def _generate_read_yaml_from_text(self, yaml_content: str, csv_file_path: str, primary_key_columns: List[str]) -> str:
+    """
+    Fallback method to generate read YAML using regex when YAML parsing fails.
+    This is a more robust approach for malformed YAML files.
+    """
+    # Try to extract table information using regex
+    table_name = None
+    keyspace = 'baselines'  # Default keyspace
+    
+    # Try to extract from CREATE TABLE statement
+    create_match = re.search(r'CREATE\s+TABLE\s+if\s+not\s+exists\s+<<keyspace:([^>]+)>>\.(\w+)', yaml_content)
+    if create_match:
+        keyspace = create_match.group(1)
+        table_name = create_match.group(2)
+    else:
+        # Try alternative pattern
+        alt_match = re.search(r'CREATE\s+TABLE\s+if\s+not\s+exists\s+(\w+)\.(\w+)', yaml_content)
+        if alt_match:
+            keyspace = alt_match.group(1)
+            table_name = alt_match.group(2)
+    
+    # If still no table name, try the insert statement
+    if not table_name:
+        insert_match = re.search(r'insert\s+into\s+<<keyspace:([^>]+)>>\.(\w+)', yaml_content, re.IGNORECASE)
+        if insert_match:
+            keyspace = insert_match.group(1)
+            table_name = insert_match.group(2)
+        else:
+            # Try alternative pattern
+            alt_match = re.search(r'insert\s+into\s+(\w+)\.(\w+)', yaml_content, re.IGNORECASE)
+            if alt_match:
+                keyspace = alt_match.group(1)
+                table_name = alt_match.group(2)
+    
+    if not table_name:
+        return "# Error: Could not determine table name from write YAML"
+    
+    # Create the read YAML
+    read_yaml_lines = [
+        "scenarios:",
+        "  default:",
+        f"    read1: run driver=cql tags='block:read1' cycles==TEMPLATE(read-cycles,1000) threads=auto",
+        "",
+        "bindings:"
+    ]
+    
+    # Primary key in CSVSampler format
+    primary_key_column = primary_key_columns[0]  # Use the first primary key column for CSVSampler
+    read_yaml_lines.append(f"  {primary_key_column}: CSVSampler('{primary_key_column}','{primary_key_column}-weight','{csv_file_path}');")
+    read_yaml_lines.append("")
+    
+    # Add blocks section
+    read_yaml_lines.extend([
+        "blocks:",
+        "  read1:",
+        "    params:",
+        "      cl: TEMPLATE(read_cl,LOCAL_QUORUM)",
+        "      instrument: true",
+        "      prepared: true",
+        "    ops:",
+        f"      read_by_{primary_key_column}: |"
+    ])
+    
+    # Create a SELECT statement with primary key as WHERE clause
+    selected_columns = ", ".join(primary_key_columns + ["insertedtimestamp"])  # Include timestamp
+    select_statement = [
+        f"        SELECT {selected_columns}",
+        f"        FROM <<keyspace:{keyspace}>>.{table_name}",
+        f"        WHERE {primary_key_column} = {{{primary_key_column}}}"
+    ]
+    
+    # Add additional primary key columns to WHERE clause if any
+    for i, pk_col in enumerate(primary_key_columns[1:], 1):
+        select_statement.append(f"        AND {pk_col} = {{{pk_col}}}")
+    
+    select_statement.append("        LIMIT 1;")
+    
+    # Add select statement to YAML
+    read_yaml_lines.extend(select_statement)
+    
+    return "\n".join(read_yaml_lines)
 
 # Example usage
 if __name__ == "__main__":

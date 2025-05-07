@@ -1,11 +1,11 @@
-// src/components/ReadYamlPanel.tsx - Updated with CSV support
+// src/components/ReadYamlPanel.tsx
 import React, { useState } from 'react';
 import './ReadYamlPanel.css';
 
 interface ReadYamlPanelProps {
   onFilesSelected: (files: FileList) => void;
   onGenerateReadYaml: () => void;
-  onGenerateFromCsv: (writeYamlFile: File, csvPath: string, primaryKeyColumns: string) => Promise<void>;
+  onGenerateFromCsv: (writeYamlFile: File, csvPath: string, primaryKeyColumns: string, readCycles?: number) => Promise<void>;
   selectedFiles: FileList | null;
   isLoading: boolean;
   csvReadLoading: boolean;
@@ -19,26 +19,28 @@ const ReadYamlPanel: React.FC<ReadYamlPanelProps> = ({
   isLoading,
   csvReadLoading
 }) => {
-  // State for the tab selection within the Read panel
-  const [readTab, setReadTab] = useState<'files' | 'csv'>('files');
-  
-  // State for CSV read functionality
   const [writeYamlFile, setWriteYamlFile] = useState<File | null>(null);
   const [csvPath, setCsvPath] = useState<string>('');
   const [primaryKeyColumns, setPrimaryKeyColumns] = useState<string>('');
+  const [readCycles, setReadCycles] = useState<number>(1000);
   const [validationError, setValidationError] = useState<string | null>(null);
 
-  // Handlers for the YAML files tab
+  // Handlers for file uploads
   const handleFilesChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files.length > 0) {
       onFilesSelected(event.target.files);
+      // If it's a single file, also set it as the write YAML file
+      if (event.target.files.length === 1) {
+        setWriteYamlFile(event.target.files[0]);
+      }
     }
   };
 
-  // Handlers for the CSV tab
   const handleWriteYamlChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files.length > 0) {
       setWriteYamlFile(event.target.files[0]);
+      // Also update the selected files for the parent component
+      onFilesSelected(event.target.files);
       setValidationError(null);
     }
   };
@@ -53,7 +55,15 @@ const ReadYamlPanel: React.FC<ReadYamlPanelProps> = ({
     setValidationError(null);
   };
 
-  const handleSubmitCsv = async (event: React.FormEvent) => {
+  const handleReadCyclesChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const value = parseInt(event.target.value, 10);
+    if (!isNaN(value) && value > 0) {
+      setReadCycles(value);
+    }
+    setValidationError(null);
+  };
+
+  const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     
     // Validate inputs
@@ -74,7 +84,7 @@ const ReadYamlPanel: React.FC<ReadYamlPanelProps> = ({
 
     // All validation passed, call the parent handler
     try {
-      await onGenerateFromCsv(writeYamlFile, csvPath, primaryKeyColumns);
+      await onGenerateFromCsv(writeYamlFile, csvPath, primaryKeyColumns, readCycles);
     } catch (error) {
       setValidationError(error instanceof Error ? error.message : 'An unknown error occurred');
     }
@@ -86,183 +96,106 @@ const ReadYamlPanel: React.FC<ReadYamlPanelProps> = ({
         <h2>Generate Read YAML</h2>
       </div>
       
-      <div className="read-mode-tabs">
-        <button 
-          className={`read-mode-tab ${readTab === 'files' ? 'active' : ''}`}
-          onClick={() => setReadTab('files')}
-        >
-          From YAML Files
-        </button>
-        <button 
-          className={`read-mode-tab ${readTab === 'csv' ? 'active' : ''}`}
-          onClick={() => setReadTab('csv')}
-        >
-          From CSV
-        </button>
-      </div>
-      
       <div className="panel-content">
-        {/* Content for YAML files tab */}
-        {readTab === 'files' && (
-          <div className="files-tab-content">
-            <div className="file-upload-section">
-              <label htmlFor="ingest-files" className="file-upload-label">
-                <div className="upload-icon"></div>
-                <div className="upload-text">
-                  <strong>Upload Ingestion Files</strong>
-                  <span>Select multiple YAML files or a ZIP file</span>
-                </div>
-              </label>
+        <form onSubmit={handleSubmit}>
+          <div className="file-upload-section">
+            <label htmlFor="write-yaml-file" className="file-upload-label">
+              <div className="upload-icon"></div>
+              <div className="upload-text">
+                <strong>Upload Write YAML File</strong>
+                <span>Select a NoSQLBench write YAML file</span>
+              </div>
+            </label>
+            <input 
+              type="file" 
+              id="write-yaml-file" 
+              accept=".yaml,.yml"
+              onChange={handleWriteYamlChange}
+              className="file-input"
+            />
+            
+            {writeYamlFile && (
+              <div className="selected-files">
+                <div className="files-count">Write YAML file selected:</div>
+                <ul className="files-list">
+                  <li className="selected-file-item">
+                    <div className="file-icon">📄</div>
+                    <div className="file-details">
+                      <div className="file-name">{writeYamlFile.name}</div>
+                      <div className="file-size">{formatFileSize(writeYamlFile.size)}</div>
+                    </div>
+                  </li>
+                </ul>
+              </div>
+            )}
+          </div>
+          
+          <div className="csv-section">
+            <div className="form-group">
+              <label htmlFor="csv-path">DSBulk CSV File Path</label>
               <input 
-                type="file" 
-                id="ingest-files" 
-                accept=".yaml,.yml,.zip"
-                onChange={handleFilesChange}
-                className="file-input"
-                multiple
+                type="text" 
+                id="csv-path" 
+                value={csvPath}
+                onChange={handleCsvPathChange}
+                placeholder="/path/to/dsbulk/export.csv"
+                className="text-input"
               />
-              
-              {selectedFiles && selectedFiles.length > 0 && (
-                <div className="selected-files">
-                  <div className="files-count">{selectedFiles.length} file(s) selected:</div>
-                  <ul className="files-list">
-                    {Array.from(selectedFiles).map((file, index) => (
-                      <li key={index} className="selected-file-item">
-                        <div className="file-icon">📄</div>
-                        <div className="file-details">
-                          <div className="file-name">{file.name}</div>
-                          <div className="file-size">{formatFileSize(file.size)}</div>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+              <div className="help-text">Full path to the CSV file generated by DSBulk on the server</div>
             </div>
             
-            <button 
-              className="generate-read-button"
-              onClick={onGenerateReadYaml}
-              disabled={!selectedFiles || selectedFiles.length === 0 || isLoading}
-            >
-              {isLoading ? 'Generating...' : 'Generate Read YAML Files'}
-            </button>
+            <div className="form-group">
+              <label htmlFor="primary-key-columns">Primary Key Columns</label>
+              <input 
+                type="text" 
+                id="primary-key-columns" 
+                value={primaryKeyColumns}
+                onChange={handlePrimaryKeyColumnsChange}
+                placeholder="sessionid,insertedtimestamp"
+                className="text-input"
+              />
+              <div className="help-text">Comma-separated list of primary key column names for the WHERE clause</div>
+            </div>
             
-            <div className="note-section">
-              <h3>How it works</h3>
-              <p>
-                Upload one or more NoSQLBench ingestion YAML files, or a ZIP file containing them. 
-                The system will analyze these files and generate corresponding read YAML files 
-                for each table defined in your ingestion files.
-              </p>
+            <div className="form-group">
+              <label htmlFor="read-cycles">Read Cycles</label>
+              <input 
+                type="number" 
+                id="read-cycles" 
+                value={readCycles}
+                onChange={handleReadCyclesChange}
+                min="1"
+                className="text-input"
+              />
+              <div className="help-text">Number of read operations to perform (default: 1000)</div>
             </div>
           </div>
-        )}
+          
+          {validationError && (
+            <div className="validation-error">{validationError}</div>
+          )}
+          
+          <button 
+            type="submit"
+            className="generate-read-button"
+            disabled={csvReadLoading}
+          >
+            {csvReadLoading ? 'Generating...' : 'Generate Read YAML File'}
+          </button>
+        </form>
         
-        {/* Content for CSV tab */}
-        {readTab === 'csv' && (
-          <div className="csv-tab-content">
-            <form onSubmit={handleSubmitCsv}>
-              <div className="form-group">
-                <label htmlFor="write-yaml-file">Upload Write YAML File</label>
-                <div className="file-input-wrapper">
-                  <input 
-                    type="file" 
-                    id="write-yaml-file" 
-                    accept=".yaml,.yml"
-                    onChange={handleWriteYamlChange}
-                    className="file-input"
-                  />
-                  <div className="custom-file-upload">
-                    <div className="upload-icon"></div>
-                    <div className="upload-text">
-                      <span>Select write YAML file</span>
-                    </div>
-                  </div>
-                  {writeYamlFile && (
-                    <div className="selected-file">
-                      <span className="file-name">{writeYamlFile.name}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-              
-              <div className="form-group">
-                <label htmlFor="csv-path">CSV File Path</label>
-                <input 
-                  type="text" 
-                  id="csv-path" 
-                  value={csvPath}
-                  onChange={handleCsvPathChange}
-                  placeholder="/path/to/csv/file.csv"
-                  className="text-input"
-                />
-                <div className="help-text">Full path to the CSV file on the server</div>
-              </div>
-              
-              <div className="form-group">
-                <label htmlFor="primary-key-columns">Primary Key Column</label>
-                <input 
-                  type="text" 
-                  id="primary-key-columns" 
-                  value={primaryKeyColumns}
-                  onChange={handlePrimaryKeyColumnsChange}
-                  placeholder="sessionid"
-                  className="text-input"
-                />
-                <div className="help-text">Primary key column for the WHERE clause (e.g., sessionid)</div>
-              </div>
-              
-              {validationError && (
-                <div className="validation-error">{validationError}</div>
-              )}
-              
-              <button 
-                type="submit"
-                className="generate-read-button"
-                disabled={csvReadLoading}
-              >
-                {csvReadLoading ? 'Generating...' : 'Generate Read YAML from CSV'}
-              </button>
-            </form>
-            
-            <div className="note-section">
-              <h3>How it works</h3>
-              <p>
-                This mode generates a read YAML file that uses a CSV file with your test data.
-                Upload a write YAML file, specify the path to your CSV file on the server,
-                and provide the primary key column to be used in the WHERE clause.
-              </p>
-              <p>
-                The generated read YAML will use CSVSampler to select values from your 
-                data file when running read operations, creating realistic query patterns.
-              </p>
-              <div className="code-example">
-                <pre>
-{`scenarios:
-  default:
-    read1: run driver=cql tags='block:read1' cycles==TEMPLATE(read-cycles,1000) threads=auto
-
-bindings:
-  sessionid: CSVSampler('sessionid','sessionid-weight','/path/to/csv/file.csv');
-
-blocks:
-  read1:
-    params:
-      cl: TEMPLATE(read_cl,LOCAL_QUORUM)
-      instrument: true
-      prepared: true
-    ops:
-      read_by_sessionid: |
-        SELECT sessionid, insertedtimestamp
-        FROM <<keyspace:baselines>>.table_name
-        WHERE sessionid = {sessionid}
-        LIMIT 1;`}
-                </pre>
-              </div>
-            </div>
-          </div>
-        )}
+        <div className="note-section">
+          <h3>How it works</h3>
+          <p>
+            Upload a NoSQLBench write YAML file and specify the path to your DSBulk CSV file.
+            The tool will generate a read YAML file that uses the CSVSampler to select values 
+            from your data for realistic read operations.
+          </p>
+          <p>
+            The CSV file should contain the primary key column values you want to use for reading.
+            This approach ensures your read operations target existing data in your database.
+          </p>
+        </div>
       </div>
     </div>
   );

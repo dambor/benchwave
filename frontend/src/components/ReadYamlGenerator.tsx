@@ -1,152 +1,151 @@
-// src/components/ReadYamlGenerator.tsx
+// src/components/CsvReadGenerator.tsx
 import React, { useState } from 'react';
-import './ReadYamlGenerator.css';
+import './CsvReadGenerator.css';
 
-interface ReadYamlGeneratorProps {
-  // No props needed for now, but we maintain the interface for future extensibility
+interface CsvReadGeneratorProps {
+  onGenerateFromCsv: (writeYamlFile: File, csvPath: string, primaryKeyColumns: string) => Promise<void>;
+  isLoading: boolean;
 }
 
-const ReadYamlGenerator: React.FC<ReadYamlGeneratorProps> = () => {
-  const [ingestYamlFile, setIngestYamlFile] = useState<File | null>(null);
-  const [dsbulkCsvPath, setDsbulkCsvPath] = useState<string>('');
-  const [keyspace, setKeyspace] = useState<string>('baselines');
-  const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
+const CsvReadGenerator: React.FC<CsvReadGeneratorProps> = ({
+  onGenerateFromCsv,
+  isLoading
+}) => {
+  const [writeYamlFile, setWriteYamlFile] = useState<File | null>(null);
+  const [csvPath, setCsvPath] = useState<string>('');
+  const [primaryKeyColumns, setPrimaryKeyColumns] = useState<string>('');
+  const [validationError, setValidationError] = useState<string | null>(null);
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleWriteYamlChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files.length > 0) {
-      setIngestYamlFile(event.target.files[0]);
-      setError(null);
+      setWriteYamlFile(event.target.files[0]);
+      setValidationError(null);
     }
   };
 
-  const handleDsbulkPathChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setDsbulkCsvPath(event.target.value);
-    setError(null);
+  const handleCsvPathChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setCsvPath(event.target.value);
+    setValidationError(null);
   };
 
-  const handleKeyspaceChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setKeyspace(event.target.value);
+  const handlePrimaryKeyColumnsChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setPrimaryKeyColumns(event.target.value);
+    setValidationError(null);
   };
 
-  const handleGenerateReadYaml = async () => {
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    
     // Validate inputs
-    if (!ingestYamlFile) {
-      setError('Please select an ingest YAML file');
+    if (!writeYamlFile) {
+      setValidationError('Please select a write YAML file');
       return;
     }
-    
-    if (!dsbulkCsvPath.trim()) {
-      setError('Please enter the path to the DSBulk CSV file');
+
+    if (!csvPath.trim()) {
+      setValidationError('Please provide the CSV file path');
       return;
     }
-    
-    setLoading(true);
-    setError(null);
 
-    const formData = new FormData();
-    formData.append('ingest_yaml_file', ingestYamlFile);
-    formData.append('dsbulk_csv_path', dsbulkCsvPath);
-    formData.append('keyspace', keyspace);
+    if (!primaryKeyColumns.trim()) {
+      setValidationError('Please provide at least one primary key column');
+      return;
+    }
 
+    // All validation passed, call the parent handler
     try {
-      const response = await fetch('http://localhost:8000/api/generate-read-yaml', {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Failed to generate read YAML file');
-      }
-
-      // Get the YAML file from the response
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      
-      // Create a download link and trigger it
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `read_${ingestYamlFile.name}`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+      await onGenerateFromCsv(writeYamlFile, csvPath, primaryKeyColumns);
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'An unknown error occurred');
-    } finally {
-      setLoading(false);
+      setValidationError(error instanceof Error ? error.message : 'An unknown error occurred');
     }
   };
 
   return (
-    <div className="read-yaml-generator">
-      <h2>Generate Read YAML</h2>
-      <p className="description">
-        Create a NoSQLBench read YAML file from an existing ingest YAML and DSBulk CSV file.
-      </p>
-
-      <div className="form-container">
-        <div className="form-group">
-          <label htmlFor="ingest-yaml-file">
-            <span className="file-icon"></span>
-            Upload Ingest YAML File
-          </label>
-          <input 
-            type="file" 
-            id="ingest-yaml-file" 
-            accept=".yaml,.yml"
-            onChange={handleFileChange}
-            className="file-input"
-          />
-          {ingestYamlFile && (
-            <div className="file-info">
-              <span className="file-name">{ingestYamlFile.name}</span>
-              <span className="file-size">
-                ({Math.round(ingestYamlFile.size / 1024)} KB)
-              </span>
+    <div className="csv-read-generator">
+      <div className="panel-header">
+        <h2>Generate Read YAML from Write YAML and CSV</h2>
+      </div>
+      
+      <div className="panel-content">
+        <form onSubmit={handleSubmit}>
+          <div className="form-group">
+            <label htmlFor="write-yaml-file">Upload Write YAML File</label>
+            <div className="file-input-wrapper">
+              <input 
+                type="file" 
+                id="write-yaml-file" 
+                accept=".yaml,.yml"
+                onChange={handleWriteYamlChange}
+                className="file-input"
+              />
+              <div className="custom-file-upload">
+                <div className="upload-icon"></div>
+                <div className="upload-text">
+                  <span>Select write YAML file</span>
+                </div>
+              </div>
+              {writeYamlFile && (
+                <div className="selected-file">
+                  <span className="file-name">{writeYamlFile.name}</span>
+                </div>
+              )}
             </div>
+          </div>
+          
+          <div className="form-group">
+            <label htmlFor="csv-path">DSBulk CSV File Path</label>
+            <input 
+              type="text" 
+              id="csv-path" 
+              value={csvPath}
+              onChange={handleCsvPathChange}
+              placeholder="/path/to/dsbulk/export.csv"
+              className="text-input"
+            />
+            <div className="help-text">Full path to the CSV file on the server</div>
+          </div>
+          
+          <div className="form-group">
+            <label htmlFor="primary-key-columns">Primary Key Columns</label>
+            <input 
+              type="text" 
+              id="primary-key-columns" 
+              value={primaryKeyColumns}
+              onChange={handlePrimaryKeyColumnsChange}
+              placeholder="id,timestamp,etc"
+              className="text-input"
+            />
+            <div className="help-text">Comma-separated list of primary key column names</div>
+          </div>
+          
+          {validationError && (
+            <div className="validation-error">{validationError}</div>
           )}
+          
+          <button 
+            type="submit"
+            className="generate-button"
+            disabled={isLoading}
+          >
+            {isLoading ? 'Generating...' : 'Generate Read YAML'}
+          </button>
+        </form>
+        
+        <div className="info-section">
+          <h3>How it works</h3>
+          <p>
+            This tool generates a read YAML file based on a write YAML file and a CSV file exported from DSBulk.
+            It analyzes the write YAML to extract table structure, then creates read operations using the 
+            primary key columns you specify in the WHERE clause.
+          </p>
+          <p>
+            The CSV file must exist on the server at the path you specify and must contain all the 
+            primary key columns you list.
+          </p>
         </div>
-
-        <div className="form-group">
-          <label htmlFor="dsbulk-csv-path">DSBulk CSV File Path</label>
-          <input 
-            type="text" 
-            id="dsbulk-csv-path" 
-            value={dsbulkCsvPath}
-            onChange={handleDsbulkPathChange}
-            placeholder="/path/to/dsbulk/export.csv"
-            className="text-input"
-          />
-          <div className="help-text">Full path to the DSBulk CSV file containing the primary key values</div>
-        </div>
-
-        <div className="form-group">
-          <label htmlFor="keyspace">Keyspace (Optional)</label>
-          <input 
-            type="text" 
-            id="keyspace" 
-            value={keyspace}
-            onChange={handleKeyspaceChange}
-            placeholder="baselines"
-            className="text-input"
-          />
-          <div className="help-text">Defaults to 'baselines' if not specified</div>
-        </div>
-
-        {error && <div className="error-message">{error}</div>}
-
-        <button 
-          className="generate-button"
-          onClick={handleGenerateReadYaml}
-          disabled={loading || !ingestYamlFile || !dsbulkCsvPath.trim()}
-        >
-          {loading ? 'Generating...' : 'Generate Read YAML'}
-        </button>
       </div>
     </div>
   );
 };
 
-export default ReadYamlGenerator;
+export default CsvReadGenerator;
