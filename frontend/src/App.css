@@ -1,4 +1,4 @@
-/* src/App.css */
+/* src/App.css - Updated with styles for the tabbed interface and ReadYamlPanel */
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
   margin: 0;
@@ -25,17 +25,21 @@ body {
 }
 
 .upload-section {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  padding: 20px;
   margin-bottom: 30px;
-  gap: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .file-upload {
   display: flex;
   align-items: center;
   gap: 10px;
+  margin-bottom: 15px;
 }
 
 .file-upload label {
@@ -53,6 +57,8 @@ body {
   width: 24px;
   height: 24px;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%232563eb'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' /%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
 }
 
 .file-upload input[type="file"] {
@@ -119,13 +125,44 @@ body {
   gap: 20px;
 }
 
+/* Mode Tabs */
+.mode-tabs {
+  display: flex;
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.mode-tab {
+  flex: 1;
+  padding: 12px 20px;
+  font-size: 14px;
+  font-weight: 500;
+  background-color: #f9fafb;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.mode-tab.active {
+  background-color: white;
+  border-bottom-color: #2563eb;
+  color: #2563eb;
+}
+
+.mode-tab:hover:not(.active) {
+  background-color: #f3f4f6;
+}
+
 .generate-button {
   margin-top: 10px;
   padding: 12px 24px;
   font-size: 16px;
   font-weight: 500;
   color: white;
-  background-color: #16a34a;
+  background-color: #4a4a4a;
   border: none;
   border-radius: 4px;
   cursor: pointer;
@@ -134,10 +171,106 @@ body {
 }
 
 .generate-button:hover {
-  background-color: #15803d;
+  background-color: #333333;
 }
 
 .generate-button:disabled {
-  background-color: #86efac;
+  background-color: #cccccc;
+  color: #666666;
   cursor: not-allowed;
+}
+/* Additional styles for App.css to support the new features */
+
+/* Generated Files Overlay */
+.generated-files-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+/* Mode Tabs Styles */
+/* Update for App.css to support three tabs */
+.mode-tabs {
+  display: flex;
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+
+.mode-tab {
+  flex: 1;
+  padding: 12px 0;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 500;
+  background-color: #f9fafb;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.mode-tab.active {
+  background-color: white;
+  border-bottom-color: #2563eb;
+  color: #2563eb;
+}
+
+.mode-tab:hover:not(.active) {
+  background-color: #f3f4f6;
+}
+
+/* Ensure tabs are evenly sized with the three-tab layout */
+@media (min-width: 768px) {
+  .mode-tab {
+    min-width: 120px;
+  }
+}
+
+/* Update the upload section to make it more prominent */
+.upload-section {
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  padding: 20px;
+  margin-bottom: 30px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Style the error message to be more visible */
+.error-message {
+  color: #ef4444;
+  background-color: #fee2e2;
+  padding: 10px 16px;
+  border-radius: 4px;
+  margin-bottom: 20px;
+  border-left: 4px solid #ef4444;
+  font-size: 14px;
+}
+
+/* Improved generated files overlay styling */
+.generated-files-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  padding: 20px;
 }

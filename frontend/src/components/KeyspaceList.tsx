@@ -1,4 +1,4 @@
-// src/components/KeyspaceList.tsx
+// src/components/KeyspaceList.tsx - Updated to match the screenshot
 import React from 'react';
 import { Keyspace } from '../types';
 import './KeyspaceList.css';
