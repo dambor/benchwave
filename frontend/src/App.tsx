@@ -8,6 +8,8 @@ import ReadYamlPanel from './components/ReadYamlPanel';
 import ToolsPanel from './components/ToolsPanel'; // Import the new ToolsPanel component
 import GeneratedFilesList from './components/GeneratedFilesList';
 import { SchemaInfo, Table, Keyspace, Configuration, GeneratedYamlFile } from './types';
+import './components/ToolsPanel.css';
+import './components/SettingsPanel.css';
 
 // Base API URL - change this if your backend is running on a different port
 const API_BASE_URL = 'http://localhost:8000';
@@ -85,7 +87,12 @@ function App() {
   const handleKeyspaceSelect = (keyspace: string) => {
     setSelectedKeyspace(keyspace);
     setSelectedTables([]);
-  };
+    
+    // Clear table selections when switching to tools section
+    if (keyspace === 'tools') {
+      // You can add any tool-specific initialization here if needed
+    }
+  };  
 
   const handleTableSelect = (tableName: string, isSelected: boolean) => {
     if (isSelected) {
@@ -458,7 +465,8 @@ blocks:
       </div>
       
       {error && <div className="error-message">{error}</div>}
-      
+
+
       {schemaInfo && (
         <div className="main-content">
           <div className="left-panel">
@@ -470,43 +478,107 @@ blocks:
               selectedKeyspace={selectedKeyspace}
               onKeyspaceSelect={handleKeyspaceSelect}
             />
-            
-            {/* Add the Tools Panel here */}
-            <ToolsPanel 
-            />
           </div>
           
           <div className="right-panel">
-            {/* Mode Selection Tabs */}
-            <div className="mode-tabs">
-              <button 
-                className={`mode-tab ${activeMode === 'write' ? 'active' : ''}`}
-                onClick={() => setActiveMode('write')}
-              >
-                Write Mode
-              </button>
-              <button 
-                className={`mode-tab ${activeMode === 'read' ? 'active' : ''}`}
-                onClick={() => setActiveMode('read')}
-              >
-                Read Mode
-              </button>
-            </div>
-            
-            {/* Generated Files Overlay */}
-            {showGeneratedFiles && (
-              <div className="generated-files-overlay">
-                <GeneratedFilesList 
-                  files={generatedFiles}
-                  onDownloadFile={handleDownloadSingleFile}
-                  onDownloadAll={handleDownloadAllFiles}
-                  onClose={handleCloseGeneratedFiles}
-                />
+          
+          
+          {selectedKeyspace === 'tools' ? (
+              // Tools panel content
+              <div className="tools-panel">
+                <h2>NoSQLBench Tools</h2>
+                <div className="tools-container">
+                  <div className="tool-card">
+                    <div className="tool-icon nb5-icon"></div>
+                    <h3>NB5 Executor</h3>
+                    <p>Execute and monitor NoSQLBench 5 workloads directly from the UI</p>
+                    <button className="tool-button">Launch Tool</button>
+                  </div>
+                  <div className="tool-card">
+                    <div className="tool-icon dsbulk-icon"></div>
+                    <h3>DSBulk Utility</h3>
+                    <p>Generate DSBulk commands for high-performance data loading and unloading</p>
+                    <button className="tool-button">Launch Tool</button>
+                  </div>
+                  <div className="tool-card">
+                    <div className="tool-icon analyzer-icon"></div>
+                    <h3>Schema Analyzer</h3>
+                    <p>Analyze your Cassandra schema and get optimization recommendations</p>
+                    <button className="tool-button">Launch Tool</button>
+                  </div>
+                  <div className="tool-card">
+                    <div className="tool-icon validator-icon"></div>
+                    <h3>YAML Validator</h3>
+                    <p>Validate your NoSQLBench YAML files for syntax and logic errors</p>
+                    <button className="tool-button">Launch Tool</button>
+                  </div>
+                  <div className="tool-card">
+                    <div className="tool-icon performance-icon"></div>
+                    <h3>Performance Estimator</h3>
+                    <p>Estimate performance metrics based on your schema and workload</p>
+                    <button className="tool-button">Launch Tool</button>
+                  </div>
+                </div>
               </div>
-            )}
-            
-            {/* Write Mode Content */}
-            {activeMode === 'write' && !showGeneratedFiles && (
+            ) : selectedKeyspace === 'settings' ? (
+              // Settings panel content
+              <div className="settings-panel">
+                <h2>Application Settings</h2>
+                <div className="settings-container">
+                  <div className="settings-section">
+                    <h3>Connection Settings</h3>
+                    <div className="settings-row">
+                      <label htmlFor="cassandra-host">Cassandra Host</label>
+                      <input type="text" id="cassandra-host" placeholder="localhost" />
+                    </div>
+                    <div className="settings-row">
+                      <label htmlFor="cassandra-port">Cassandra Port</label>
+                      <input type="number" id="cassandra-port" placeholder="9042" />
+                    </div>
+                    <div className="settings-row">
+                      <label htmlFor="cassandra-username">Username</label>
+                      <input type="text" id="cassandra-username" placeholder="cassandra" />
+                    </div>
+                    <div className="settings-row">
+                      <label htmlFor="cassandra-password">Password</label>
+                      <input type="password" id="cassandra-password" />
+                    </div>
+                  </div>
+                  
+                  <div className="settings-section">
+                    <h3>Application Settings</h3>
+                    <div className="settings-row">
+                      <label htmlFor="theme-select">Theme</label>
+                      <select id="theme-select">
+                        <option value="light">Light</option>
+                        <option value="dark">Dark</option>
+                        <option value="system">System Default</option>
+                      </select>
+                    </div>
+                    <div className="settings-row">
+                      <label htmlFor="yaml-path">Default YAML Export Path</label>
+                      <div className="input-with-button">
+                        <input type="text" id="yaml-path" placeholder="/path/to/yamls" />
+                        <button className="browse-button">Browse</button>
+                      </div>
+                    </div>
+                    <div className="settings-row checkbox-row">
+                      <input type="checkbox" id="auto-select" />
+                      <label htmlFor="auto-select">Auto-select tables when keyspace is selected</label>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="settings-actions">
+                  <button className="save-settings-button">Save Settings</button>
+                  <button className="reset-settings-button">Reset to Defaults</button>
+                </div>
+              </div>
+            ) : (
+              // Regular keyspace/table view          
+          
+          
+
               <>
                 <TableList 
                   tables={Object.entries(schemaInfo.tables)
@@ -518,7 +590,6 @@ blocks:
                   selectedTables={selectedTables}
                   onTableSelect={handleTableSelect}
                   onSelectAll={handleSelectAllTables}
-                  onDownloadTable={handleDownloadTableYaml}
                   keyspace={selectedKeyspace}
                 />
                 
@@ -536,21 +607,14 @@ blocks:
                 </button>
               </>
             )}
-            
-            {/* Read Mode Content */}
-            {activeMode === 'read' && !showGeneratedFiles && (
-              <ReadYamlPanel 
-                onFilesSelected={handleIngestFilesChange}
-                onGenerateReadYaml={handleGenerateReadYaml}
-                onGenerateFromCsv={handleGenerateFromCsv}
-                selectedFiles={selectedIngestFiles}
-                isLoading={readYamlLoading}
-                csvReadLoading={csvReadLoading}
-              />
-            )}
           </div>
         </div>
       )}
+
+
+
+
+      
     </div>
   );
 }
