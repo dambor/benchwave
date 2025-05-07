@@ -2,18 +2,34 @@
 import React, { useState } from 'react';
 import './ToolsPanel.css';
 import DSBulkUtility from './DSBulkUtility';
+import NB5Executor from './NB5Executor';
+//import { GeneratedYamlFile } from '../types'; // Import the type
+import './NB5Executor.css';
 
-interface ToolsPanelProps {
-  schema?: any;  // Use the schema information from the parent component
+// Define the GeneratedYamlFile interface here
+interface GeneratedYamlFile {
+  filename: string;
+  content: string;
+  table_name: string;
 }
 
-const ToolsPanel: React.FC<ToolsPanelProps> = ({ schema }) => {
+interface ToolsPanelProps {
+  schema: any;
+  generatedYamlFiles?: GeneratedYamlFile[]; // Make it optional with proper typing
+}
+
+
+
+const ToolsPanel: React.FC<ToolsPanelProps> = ({ 
+  schema, 
+  generatedYamlFiles = [] // Default to empty array with proper typing
+}) => {
   const [activeTool, setActiveTool] = useState<string | null>(null);
   
   // Extract keyspaces and tables from schema
   const keyspaces = schema ? Object.keys(schema.keyspaces) : [];
   
-  // Transform tables data for the DSBulk component
+  // Transform tables data for the tool components
   const tablesList = schema ? Object.entries(schema.tables).map(([fullName, details]: [string, any]) => {
     // Extract primary key columns
     const primaryKeys: string[] = [];
@@ -59,11 +75,26 @@ const ToolsPanel: React.FC<ToolsPanelProps> = ({ schema }) => {
             />
           )}
           
-          {/* Add other tool components here as needed */}
+          {activeTool === 'nb5' && (
+            <NB5Executor
+              generatedYamlFiles={generatedYamlFiles}
+              schemaInfo={schema}
+            />
+          )}
         </div>
       ) : (
         // Display the tools grid
         <div className="tools-container">
+          <div 
+            className="tool-card"
+            onClick={() => handleToolSelect('nb5')}
+          >
+            <div className="tool-icon nb5-icon"></div>
+            <h3>NB5 Executor</h3>
+            <p>Execute and monitor NoSQLBench 5 workloads directly from the UI</p>
+            <button className="tool-button">Launch Tool</button>
+          </div>
+          
           <div 
             className="tool-card"
             onClick={() => handleToolSelect('dsbulk')}
@@ -72,13 +103,6 @@ const ToolsPanel: React.FC<ToolsPanelProps> = ({ schema }) => {
             <h3>DSBulk Utility</h3>
             <p>Generate DSBulk commands for high-performance data loading and unloading</p>
             <button className="tool-button">Launch Tool</button>
-          </div>
-          
-          <div className="tool-card">
-            <div className="tool-icon nb5-icon"></div>
-            <h3>NB5 Executor</h3>
-            <p>Execute and monitor NoSQLBench 5 workloads directly from the UI</p>
-            <button className="tool-button">Coming Soon</button>
           </div>
           
           <div className="tool-card">

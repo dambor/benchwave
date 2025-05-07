@@ -484,7 +484,10 @@ blocks:
           
           {selectedKeyspace === 'tools' ? (
               // Tools panel content - pass the schema info to ToolsPanel
-              <ToolsPanel schema={schemaInfo} />
+              <ToolsPanel 
+                schema={schemaInfo} 
+                generatedYamlFiles={generatedFiles}
+              />
             ) : selectedKeyspace === 'settings' ? (
               // Settings panel content
               <div className="settings-panel">
