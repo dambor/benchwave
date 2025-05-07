@@ -364,33 +364,33 @@ const NB5Executor: React.FC<NB5ExecutorProps> = ({ generatedYamlFiles, schemaInf
       {activeTab === 'execute' && (
         <div className="execute-tab">
           <div className="form-container">
-            <div className="yaml-select-container">
-              <div className="yaml-select-header">Select YAML File</div>
-              <div className="yaml-files">
+          <div className="yaml-select-container">
+            <div className="form-group">
+                <label htmlFor="yaml-file-select">Select YAML File</label>
+                <select
+                id="yaml-file-select"
+                value={selectedYamlFile}
+                onChange={(e) => {
+                    if (e.target.value === "custom") {
+                    setUseCustomYaml(true);
+                    setSelectedYamlFile("");
+                    } else {
+                    setUseCustomYaml(false);
+                    setSelectedYamlFile(e.target.value);
+                    }
+                }}
+                className="form-select"
+                >
+                <option value="">-- Select a YAML file --</option>
                 {generatedYamlFiles.map((file, index) => (
-                  <div 
-                    key={index}
-                    className={`yaml-file ${selectedYamlFile === file.filename && !useCustomYaml ? 'selected' : ''}`}
-                    onClick={() => {
-                      setSelectedYamlFile(file.filename);
-                      setUseCustomYaml(false);
-                    }}
-                  >
-                    <span className="yaml-file-icon">📄</span>
+                    <option key={index} value={file.filename}>
                     {file.filename}
-                  </div>
+                    </option>
                 ))}
-              </div>
-              
-              <div className="yaml-custom-option">
-                <input 
-                  type="checkbox" 
-                  id="custom-yaml" 
-                  checked={useCustomYaml}
-                  onChange={(e) => setUseCustomYaml(e.target.checked)}
-                />
-                <label htmlFor="custom-yaml">Use custom YAML content</label>
-              </div>
+                <option value="custom">Use custom YAML content</option>
+                </select>
+                <div className="help-text">Select a generated YAML file or use custom content</div>
+            </div>
             </div>
             
             {useCustomYaml && (
